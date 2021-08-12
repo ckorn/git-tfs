@@ -609,10 +609,27 @@ namespace GitTfs.VsCommon
             int firstChangesetInBranchToCreate, int lastChangesetIdToCheck)
         {
             var mergedItemsToFirstChangesetInBranchToCreate = new List<MergeInfo>();
+            // This does not work in all cases according to:
+            // https://github.com/git-tfs/git-tfs/issues/1383#issuecomment-871735559
+            // But TrackMerges alone just timeouts here without the help of the base changeset.
+            var queryMerges = VersionControl.QueryMerges(null, null,
+                                  new ItemSpec(tfsPathBranchToCreate, RecursionType.Full),
+                                  LatestVersionSpec.Latest,
+                                  null,
+                                  new ChangesetVersionSpec(firstChangesetInBranchToCreate))
+                                    .OrderByDescending(x => x.SourceVersion);
+            if(!queryMerges.Any())
+            {
+                Trace.WriteLine("Did not find merge from " + tfsPathParentBranch + " to " + tfsPathBranchToCreate);
+                return mergedItemsToFirstChangesetInBranchToCreate;
+            }
+            int mergeBaseChangeset = queryMerges.First().SourceVersion;
+            Trace.WriteLine("Base changeset from " + tfsPathParentBranch + " to " + tfsPathBranchToCreate + " is " + mergeBaseChangeset.ToString());
+			
             var merges = VersionControl
-                .TrackMerges(new int[] { firstChangesetInBranchToCreate },
-                    new ItemIdentifier(tfsPathBranchToCreate),
-                    new ItemIdentifier[] { new ItemIdentifier(tfsPathParentBranch), },
+                .TrackMerges(new int[] { mergeBaseChangeset },
+                    new ItemIdentifier(tfsPathParentBranch),
+                    new ItemIdentifier[] { new ItemIdentifier(tfsPathBranchToCreate), },
                     null)
                 .OrderByDescending(x => x.SourceChangeset.ChangesetId);
             MergeInfo lastMerge = null;
