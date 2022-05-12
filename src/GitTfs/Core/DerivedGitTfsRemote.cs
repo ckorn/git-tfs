@@ -34,19 +34,16 @@ namespace GitTfs.Core
         public string Id
         {
             get { return "(derived)"; }
-            set { throw DerivedRemoteException; }
         }
 
         public string TfsUrl
         {
             get { return _tfsUrl; }
-            set { throw DerivedRemoteException; }
         }
 
         public bool Autotag
         {
             get { throw DerivedRemoteException; }
-            set { throw DerivedRemoteException; }
         }
 
         public string TfsUsername
@@ -76,7 +73,6 @@ namespace GitTfs.Core
         public string TfsRepositoryPath
         {
             get { return _tfsRepositoryPath; }
-            set { throw DerivedRemoteException; }
         }
 
         public string[] TfsSubtreePaths
@@ -129,25 +125,16 @@ namespace GitTfs.Core
         public string IgnoreRegexExpression
         {
             get { throw DerivedRemoteException; }
-            set { throw DerivedRemoteException; }
         }
 
         public string IgnoreExceptRegexExpression
         {
             get { throw DerivedRemoteException; }
-            set { throw DerivedRemoteException; }
-        }
-
-        public string GitIgnorePath
-        {
-            get { throw DerivedRemoteException; }
-            set { throw DerivedRemoteException; }
         }
 
         public IGitRepository Repository
         {
             get { throw DerivedRemoteException; }
-            set { throw DerivedRemoteException; }
         }
 
         public ITfsHelper Tfs

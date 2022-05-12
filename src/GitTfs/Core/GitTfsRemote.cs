@@ -18,6 +18,7 @@ namespace GitTfs.Core
         private readonly Globals _globals;
         private readonly RemoteOptions _remoteOptions;
         private readonly ConfigProperties _properties;
+        private readonly bool _useGitIgnore;
         private int? firstChangesetId;
         private int? maxChangesetId;
         private string maxCommitHash;
@@ -35,15 +36,14 @@ namespace GitTfs.Core
 
             RemoteInfo = info;
             Id = info.Id;
-            TfsUrl = info.Url;
+            Tfs.Url = info.Url;
             TfsRepositoryPath = info.Repository;
             TfsUsername = info.Username;
             TfsPassword = info.Password;
             Aliases = (info.Aliases ?? Enumerable.Empty<string>()).ToArray();
             IgnoreRegexExpression = info.IgnoreRegex;
             IgnoreExceptRegexExpression = info.IgnoreExceptRegex;
-            GitIgnorePath = _remoteOptions.GitIgnorePath ?? info.GitIgnorePath;
-            UseGitIgnore = !_remoteOptions.NoGitIgnore && (_remoteOptions.UseGitIgnore || IsGitIgnoreSupportEnabled());
+            _useGitIgnore = !_remoteOptions.NoGitIgnore && (_remoteOptions.UseGitIgnore || IsGitIgnoreSupportEnabled());
 
             Autotag = info.Autotag;
 
@@ -99,7 +99,7 @@ namespace GitTfs.Core
             firstChangesetId = changesetId;
         }
 
-        public bool IsSubtree { get; private set; }
+        public bool IsSubtree { get; }
 
         public bool IsSubtreeOwner
         {
@@ -109,17 +109,16 @@ namespace GitTfs.Core
             }
         }
 
-        public string Id { get; set; }
+        public string Id { get; }
 
         public string TfsUrl
         {
             get { return Tfs.Url; }
-            set { Tfs.Url = value; }
         }
 
         private string[] Aliases { get; set; }
 
-        public bool Autotag { get; set; }
+        public bool Autotag { get; }
 
         public string TfsUsername
         {
@@ -133,7 +132,7 @@ namespace GitTfs.Core
             set { Tfs.Password = value; }
         }
 
-        public string TfsRepositoryPath { get; set; }
+        public string TfsRepositoryPath { get; }
 
         /// <summary>
         /// Gets the TFS server-side paths of all subtrees of this remote.
@@ -151,12 +150,10 @@ namespace GitTfs.Core
         }
         private string[] tfsSubtreePaths = null;
 
-        public string IgnoreRegexExpression { get; set; }
-        public string IgnoreExceptRegexExpression { get; set; }
-        public string GitIgnorePath { get; set; }
-        public bool UseGitIgnore { get; set; }
-        public IGitRepository Repository { get; set; }
-        public ITfsHelper Tfs { get; set; }
+        public string IgnoreRegexExpression { get; }
+        public string IgnoreExceptRegexExpression { get; }
+        public IGitRepository Repository { get; }
+        public ITfsHelper Tfs { get; }
 
         public string OwningRemoteId { get; private set; }
 
@@ -164,12 +161,20 @@ namespace GitTfs.Core
         public bool ExportMetadatas { get; set; }
         public Dictionary<string, IExportWorkItem> ExportWorkitemsMapping { get; set; }
 
+        // MaxChangesetId is the ID of the TFS changeset most recently commited to the
+        // TFS remote reference branch of the git repository. A value of 0 means that
+        // no TFS changesets have been committed yet.
         public int MaxChangesetId
         {
             get { InitHistory(); return maxChangesetId.Value; }
             set { maxChangesetId = value; }
         }
 
+        // MaxCommitHash is the hash of the most recent commit of any type on the remote
+        // reference branch of the git repository. It is typically the hash of the commit
+        // corresponding to the MaxChangesetId property, but isn't guaranteed to be. When
+        // MaxChangesetId is zero, MaxCommitHash could be the hash of the last commit made
+        // during repository initialization (e.g. the commit of a .gitignore file).
         public string MaxCommitHash
         {
             get { InitHistory(); return maxCommitHash; }
@@ -193,9 +198,11 @@ namespace GitTfs.Core
                 }
                 else
                 {
+                    // Use 0 as the flag to indicate that no TFS changesets have yet been committed
                     MaxChangesetId = 0;
 
-                    // Manage the special case where a .gitignore has been committed
+                    // Manage the special case where commits were made to the repository before the
+                    // first commit from TFS (e.g. .gitignore was committed during initialization)
                     var gitCommit = Repository.GetCommit(RemoteRef);
                     if (gitCommit != null)
                     {
@@ -271,7 +278,7 @@ namespace GitTfs.Core
 
         private bool IsPathIgnored(string path)
         {
-            return UseGitIgnore && Repository.IsPathIgnored(path);
+            return _useGitIgnore && Repository.IsPathIgnored(path);
         }
 
         private Bouncer _ignorance;
@@ -389,9 +396,9 @@ namespace GitTfs.Core
                         return fetchResult;
                     }
                     var parentSha = (renameResult != null && renameResult.IsProcessingRenameChangeset) ? renameResult.LastParentCommitBeforeRename : MaxCommitHash;
-                    var isFirstCommitInRepository = (parentSha == null);
+                    var isFirstTFSCommitInRepository = (MaxChangesetId == 0);
                     var log = Apply(parentSha, changeset, objects);
-                    if (changeset.IsRenameChangeset && !isFirstCommitInRepository)
+                    if (changeset.IsRenameChangeset && !isFirstTFSCommitInRepository)
                     {
                         if (renameResult == null || !renameResult.IsProcessingRenameChangeset)
                         {
@@ -431,12 +438,7 @@ namespace GitTfs.Core
 
         private bool ProcessMergeChangeset(ITfsChangeset changeset, bool stopOnFailMergeCommit, ref string parentCommit)
         {
-            if (!Tfs.CanGetBranchInformation)
-            {
-                Trace.TraceInformation("info: this changeset " + changeset.Summary.ChangesetId +
-                                 " is a merge changeset. But was not treated as is because this version of TFS can't manage branches...");
-            }
-            else if (!IsIgnoringBranches())
+            if (!IsIgnoringBranches())
             {
                 var parentChangesetId = Tfs.FindMergeChangesetParent(TfsRepositoryPath, changeset.Summary.ChangesetId, this);
                 if (parentChangesetId < 1)  // Handle missing merge parent info
@@ -1094,7 +1096,7 @@ namespace GitTfs.Core
                     Url = TfsUrl,
                     Repository = tfsRepositoryPath,
                     RemoteOptions = remoteOptions
-                }, string.Empty);
+                });
                 tfsRemote.ExportMetadatas = ExportMetadatas;
                 tfsRemote.ExportWorkitemsMapping = ExportWorkitemsMapping;
             }

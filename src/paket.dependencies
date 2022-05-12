@@ -1,5 +1,5 @@
 # pin paket to a specific version so the build is really reproducable
-version 5.251.0
+version 6.2.1
 
 framework: net472
 source https://api.nuget.org/v3/index.json
@@ -54,3 +54,11 @@ group VS2019
 	nuget Microsoft.TeamFoundationServer.ExtendedClient ~> 16.0
 	nuget Microsoft.VisualStudio.Setup.Configuration.Interop
 	nuget Microsoft.VisualStudio.Settings.15.0 ~> 16.0
+
+group VS2022
+	framework: net472
+	source https://api.nuget.org/v3/index.json
+	nuget Microsoft.TeamFoundationServer.Client ~> 16.0
+	nuget Microsoft.TeamFoundationServer.ExtendedClient ~> 16.0
+	nuget Microsoft.VisualStudio.Setup.Configuration.Interop
+	nuget Microsoft.VisualStudio.Settings.15.0 ~> 17.0

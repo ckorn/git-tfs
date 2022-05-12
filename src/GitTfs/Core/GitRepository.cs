@@ -68,9 +68,7 @@ namespace GitTfs.Core
             return "refs/remotes/tfs/" + branchName;
         }
 
-        public string GitDir { get; set; }
-        public string WorkingCopyPath { get; set; }
-        public string WorkingCopySubdir { get; set; }
+        public string GitDir { get; }
 
         protected override GitProcess Start(string[] command, Action<ProcessStartInfo> initialize)
         {
@@ -81,10 +79,6 @@ namespace GitTfs.Core
         {
             if (GitDir != null)
                 gitCommand.EnvironmentVariables["GIT_DIR"] = GitDir;
-            if (WorkingCopyPath != null)
-                gitCommand.WorkingDirectory = WorkingCopyPath;
-            if (WorkingCopySubdir != null)
-                gitCommand.WorkingDirectory = Path.Combine(gitCommand.WorkingDirectory, WorkingCopySubdir);
         }
 
         public string GetConfig(string key)
@@ -174,21 +168,8 @@ namespace GitTfs.Core
             return _cachedRemotes ?? (_cachedRemotes = ReadTfsRemotes());
         }
 
-        public IGitTfsRemote CreateTfsRemote(RemoteInfo remote, string autocrlf = null, string ignorecase = null)
+        public IGitTfsRemote CreateTfsRemote(RemoteInfo remote)
         {
-            if (HasRemote(remote.Id))
-                throw new GitTfsException("A remote with id \"" + remote.Id + "\" already exists.");
-
-            // The autocrlf default (as indicated by a null) is false and is set to override the system-wide setting.
-            // When creating branches we use the empty string to indicate that we do not want to set the value at all.
-            if (autocrlf == null)
-                autocrlf = "false";
-            if (autocrlf != string.Empty)
-                _repository.Config.Set("core.autocrlf", autocrlf);
-
-            if (ignorecase != null)
-                _repository.Config.Set("core.ignorecase", ignorecase);
-
             foreach (var entry in _remoteConfigReader.Dump(remote))
             {
                 if (entry.Value != null)
@@ -206,6 +187,7 @@ namespace GitTfs.Core
 
             return _cachedRemotes[remote.Id] = gitTfsRemote;
         }
+
 
         public void DeleteTfsRemote(IGitTfsRemote remote)
         {
@@ -787,8 +769,14 @@ namespace GitTfs.Core
             var sha = _repository.ObjectDatabase.CreateCommit(signature, signature, ".gitignore", tree, new Commit[0], false).Sha;
             Trace.WriteLine(".gitignore commit created: " + sha);
 
-            _repository.Refs.Add(ShortToTfsRemoteName("default"), new ObjectId(sha));
-            _repository.Refs.Add(ShortToLocalName("master"), new ObjectId(sha));
+            // Point our tfs remote branch to the .gitignore commit
+            var defaultRef = ShortToTfsRemoteName("default");
+            _repository.Refs.Add(defaultRef, new ObjectId(sha));
+
+            // Also point HEAD to the .gitignore commit, if it isn't already. This
+            // ensures a common initial commit for the git-tfs init --gitignore case.
+            if (_repository.Head.CanonicalName != defaultRef)
+                _repository.Refs.Add(_repository.Head.CanonicalName, new ObjectId(sha));
 
             return sha;
         }
