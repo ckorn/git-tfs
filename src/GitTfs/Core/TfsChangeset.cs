@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -185,12 +185,16 @@ namespace GitTfs.Core
             catch
             {
             }
+			bool foundInAuthorFile = false;
             var name = changesetToLog.Committer;
             var email = changesetToLog.Committer;
+			Trace.WriteLine($"Lookup author {_authors?.Authors?.Count ?? 0}: {changesetToLog.Committer}");
             if (_authors != null && _authors.Authors.ContainsKey(changesetToLog.Committer))
             {
                 name = _authors.Authors[changesetToLog.Committer].Name;
                 email = _authors.Authors[changesetToLog.Committer].Email;
+				Trace.WriteLine($"Found author {changesetToLog.Committer}: {name} {email}");
+				foundInAuthorFile = true;
             }
             else if (identity != null)
             {
@@ -202,6 +206,8 @@ namespace GitTfs.Core
 
                 if (!string.IsNullOrWhiteSpace(identity.MailAddress))
                     email = identity.MailAddress;
+				
+				Trace.WriteLine($"Author by identity: {name} {email}");
             }
             else if (!string.IsNullOrWhiteSpace(changesetToLog.Committer))
             {
@@ -211,8 +217,8 @@ namespace GitTfs.Core
                     name = split[1].ToLower();
                     email = string.Format("{0}@{1}.tfs.local", name, split[0].ToLower());
                 }
+				Trace.WriteLine($"Author by {changesetToLog.Committer}: {name} {email}");
             }
-
             // committer's & author's name and email MUST NOT be empty as otherwise they would be picked
             // by git from user.name and user.email config settings which is bad thing because commit could
             // be different depending on whose machine it fetched
@@ -224,6 +230,21 @@ namespace GitTfs.Core
             {
                 email = "unknown@tfs.local";
             }
+			if((!foundInAuthorFile) && (_authors != null))
+			{
+				string lookup = $"{name} <{email}>";
+				if(_authors.Authors.ContainsKey(lookup))
+				{
+					 name = _authors.Authors[lookup].Name;
+					 email = _authors.Authors[lookup].Email;
+					 Trace.WriteLine($"Found author {lookup}: {name} {email}");
+				}
+				else
+				{
+					throw new Exception($"Not found author: {lookup}");
+				}
+			}
+			Trace.WriteLine($"Changeset {changesetToLog.ChangesetId}: {name} {email}");
             if (remote == null)
                 remote = Summary.Remote;
             return new LogEntry
