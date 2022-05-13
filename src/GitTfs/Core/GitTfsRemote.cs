@@ -373,6 +373,7 @@ namespace GitTfs.Core
             // TFS 2010 doesn't like when we ask for history past its last changeset.
             if (MaxChangesetId >= latestChangesetId)
                 return fetchResult;
+            string abortFile = Path.Combine(Path.GetTempPath(), "git-tfs-fetch-abort");
 
             bool fetchRetrievedChangesets;
             do
@@ -388,6 +389,11 @@ namespace GitTfs.Core
                     fetchResult.NewChangesetCount++;
                     if (lastChangesetIdToFetch > 0 && changeset.Summary.ChangesetId > lastChangesetIdToFetch)
                         return fetchResult;
+                    if (File.Exists(abortFile))
+                    {
+                        Trace.TraceInformation($"Abort fetch because of abort file: {abortFile}");
+                        return fetchResult;
+                    }
                     string parentCommitSha = null;
                     if (changeset.IsMergeChangeset && !ProcessMergeChangeset(changeset, stopOnFailMergeCommit, ref parentCommitSha))
                     {
