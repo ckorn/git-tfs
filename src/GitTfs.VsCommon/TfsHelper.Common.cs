@@ -518,20 +518,37 @@ namespace GitTfs.VsCommon
                                   null,
                                   new ChangesetVersionSpec(firstChangesetInBranchToCreate))
                                     .OrderByDescending(x => x.SourceVersion);
-            if(!queryMerges.Any())
+            int mergeBaseChangeset = 0;
+            if(queryMerges.Any())
             {
-                Trace.WriteLine("Did not find merge from " + tfsPathParentBranch + " to " + tfsPathBranchToCreate);
-                return mergedItemsToFirstChangesetInBranchToCreate;
+                mergeBaseChangeset = queryMerges.First().SourceVersion;
+                Trace.WriteLine($"Base changeset from {tfsPathParentBranch} to {tfsPathBranchToCreate} (first changeset={firstChangesetInBranchToCreate}) is {mergeBaseChangeset}");
             }
-            int mergeBaseChangeset = queryMerges.First().SourceVersion;
-            Trace.WriteLine("Base changeset from " + tfsPathParentBranch + " to " + tfsPathBranchToCreate + " is " + mergeBaseChangeset.ToString());
-			
-            var merges = VersionControl
-                .TrackMerges(new int[] { mergeBaseChangeset },
-                    new ItemIdentifier(tfsPathParentBranch),
-                    new ItemIdentifier[] { new ItemIdentifier(tfsPathBranchToCreate), },
-                    null)
-                .OrderByDescending(x => x.SourceChangeset.ChangesetId);
+            else
+            {
+                Trace.WriteLine($"Did not find merge from {tfsPathParentBranch} to {tfsPathBranchToCreate} (first changeset={firstChangesetInBranchToCreate})");
+            }
+            
+            // Use old code as fall-back because the new code does not work
+            // when a branch has been renamed.
+            ExtendedMerge[] trackedMerges;
+            if(mergeBaseChangeset != 0)
+            {
+                trackedMerges = VersionControl
+                    .TrackMerges(new int[] { mergeBaseChangeset },
+                        new ItemIdentifier(tfsPathParentBranch),
+                        new ItemIdentifier[] { new ItemIdentifier(tfsPathBranchToCreate), },
+                        null);
+            }
+            else
+            {
+                trackedMerges = VersionControl
+                    .TrackMerges(new int[] { firstChangesetInBranchToCreate },
+                        new ItemIdentifier(tfsPathParentBranch),
+                        new ItemIdentifier[] { new ItemIdentifier(tfsPathBranchToCreate), },
+                        null);
+            }
+            var merges = trackedMerges.OrderByDescending(x => x.SourceChangeset.ChangesetId);
             MergeInfo lastMerge = null;
             foreach (var extendedMerge in merges)
             {
