@@ -30,6 +30,7 @@ namespace GitTfs.VsCommon
         protected TfsTeamProjectCollection _server;
         private static bool _resolverInstalled;
         private AuthorsFile _authorsFile;
+        private Uri authenticatedUri;
 
         public TfsHelperBase(TfsApiBridge bridge, IContainer container)
         {
@@ -85,9 +86,12 @@ namespace GitTfs.VsCommon
                 {
                     uri = new Uri(Url);
                 }
-
-                _server = GetTfsCredential(uri);
-                _server.EnsureAuthenticated();
+                if(authenticatedUri?.ToString() != uri.ToString())
+                {
+                    _server = GetTfsCredential(uri);
+                    _server.EnsureAuthenticated();
+                    authenticatedUri = uri;
+                }
             }
         }
 
