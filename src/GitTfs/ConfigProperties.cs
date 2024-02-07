@@ -24,6 +24,11 @@ namespace GitTfs
             get { return _loader.Get(GitTfsConstants.BatchSize, 100); }
         }
 
+        public string SkipChangeSets
+        {
+            get { return _loader.Get(GitTfsConstants.SkipChangeSets, ""); }
+        }
+
         public int? InitialChangeset
         {
             set

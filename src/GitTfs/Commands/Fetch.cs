@@ -215,12 +215,8 @@ namespace GitTfs.Commands
                     _properties.InitialChangeset = InitialChangeset.Value;
                     _properties.PersistAllOverrides();
                     remote.QuickFetch(InitialChangeset.Value, IgnoreRestrictedChangesets);
-                    remote.Fetch(stopOnFailMergeCommit, upToChangeSet);
                 }
-                else
-                {
-                    remote.Fetch(stopOnFailMergeCommit, upToChangeSet);
-                }
+                remote.Fetch(stopOnFailMergeCommit, upToChangeSet);
             }
             finally
             {
