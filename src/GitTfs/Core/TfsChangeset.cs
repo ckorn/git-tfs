@@ -74,7 +74,8 @@ namespace GitTfs.Core
             }
             else
             {
-                Trace.TraceInformation("Cannot checkout file '{0}' from TFS. Skip it", change.GitPath);
+                Trace.TraceInformation("Cannot checkout file '{0}' from TFS.", change.GitPath);
+                throw new GitTfsException("error: failed to checkout file(s) from TFS !");
             }
         }
 

@@ -375,6 +375,9 @@ namespace GitTfs.Core
                 return fetchResult;
 
             bool fetchRetrievedChangesets;
+
+            var changeSetsToIgnore = Tfs.ChangeSetNumbersToIgnore();
+
             do
             {
                 var fetchedChangesets = FetchChangesets(true, lastChangesetIdToFetch);
@@ -384,10 +387,19 @@ namespace GitTfs.Core
                 foreach (var changeset in fetchedChangesets)
                 {
                     fetchRetrievedChangesets = true;
-
-                    fetchResult.NewChangesetCount++;
                     if (lastChangesetIdToFetch > 0 && changeset.Summary.ChangesetId > lastChangesetIdToFetch)
                         return fetchResult;
+
+                    if (changeSetsToIgnore.Contains(changeset.Summary.ChangesetId))
+                    {
+                        stdout.WriteLine(
+                            "info: changeset " + changeset.Summary.ChangesetId + " is in the ignore list (config:"
+                            + GitTfsConstants.SkipChangeSets + ") and will be skipped");
+                        continue;
+                    }
+
+                    fetchResult.NewChangesetCount++;
+
                     string parentCommitSha = null;
                     if (changeset.IsMergeChangeset && !ProcessMergeChangeset(changeset, stopOnFailMergeCommit, ref parentCommitSha))
                     {
