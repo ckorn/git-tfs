@@ -185,11 +185,11 @@ namespace GitTfs.Core
             catch
             {
             }
-			bool foundInAuthorFile = false;
             var name = changesetToLog.Committer;
             var email = changesetToLog.Committer;
-			Trace.WriteLine($"Lookup author {_authors?.Authors?.Count ?? 0}: {changesetToLog.Committer}");
-            if (_authors != null && _authors.Authors.ContainsKey(changesetToLog.Committer))
+            bool foundInAuthorFile = _authors?.Authors?.ContainsKey(changesetToLog.Committer) ?? false;
+            Trace.WriteLine($"Lookup author {_authors?.Authors?.Count ?? 0}: {changesetToLog.Committer}");
+            if (foundInAuthorFile)
             {
                 name = _authors.Authors[changesetToLog.Committer].Name;
                 email = _authors.Authors[changesetToLog.Committer].Email;

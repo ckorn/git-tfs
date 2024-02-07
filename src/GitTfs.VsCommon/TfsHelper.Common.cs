@@ -30,7 +30,7 @@ namespace GitTfs.VsCommon
         protected TfsTeamProjectCollection _server;
         private static bool _resolverInstalled;
         private AuthorsFile _authorsFile;
-        private Uri authenticatedUri;
+        private Uri _lastAuthenticatedUri;
 
         public TfsHelperBase(TfsApiBridge bridge, IContainer container)
         {
@@ -86,11 +86,14 @@ namespace GitTfs.VsCommon
                 {
                     uri = new Uri(Url);
                 }
-                if(authenticatedUri?.ToString() != uri.ToString())
+                // Only authenticate if the TFS Server Uri is different to the last authenticated Uri,
+                // avoiding useless authentication attempts on an already authenticated server.
+                // This covers only the common case that the remotes are on the same TFS server.
+                if (_lastAuthenticatedUri?.ToString() != uri.ToString())
                 {
                     _server = GetTfsCredential(uri);
                     _server.EnsureAuthenticated();
-                    authenticatedUri = uri;
+                    _lastAuthenticatedUri = uri;
                 }
             }
         }
