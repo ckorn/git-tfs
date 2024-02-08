@@ -205,9 +205,9 @@ Task("Build").Description("Build git-tfs")
 	.IsDependentOn("UpdateAssemblyInfo")
 	.Does(() =>
 {
-		MSBuild(PathToSln, settings => {
-		settings.WithTarget("restore");
-	});
+	//	MSBuild(PathToSln, settings => {
+	//	settings.WithTarget("restore");
+	//});
 
 	// Use MSBuild
 	// /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /nologo /p:BuildInParallel=true /m:4
