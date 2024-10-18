@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using GitTfs.Commands;
+﻿using GitTfs.Commands;
 using StructureMap.AutoMocking;
 using NDesk.Options;
 using Xunit;
@@ -67,15 +66,9 @@ namespace GitTfs.Test.Commands
 
             private readonly OptionSet TestOptions = new OptionSet();
 
-            public OptionSet OptionSet
-            {
-                get { return TestOptions; }
-            }
+            public OptionSet OptionSet => TestOptions;
 
-            public int Run(IList<string> args)
-            {
-                throw new System.NotImplementedException();
-            }
+            public int Run(IList<string> args) => throw new System.NotImplementedException();
         }
     }
 }

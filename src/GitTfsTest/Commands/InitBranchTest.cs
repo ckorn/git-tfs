@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using GitTfs.Commands;
+﻿using GitTfs.Commands;
 using GitTfs.Core;
 using GitTfs.Core.TfsInterop;
 using GitTfs.VsFake;
+
 using Moq;
+
 using StructureMap.AutoMocking;
+
 using Xunit;
 
 namespace GitTfs.Test.Commands
@@ -55,16 +56,10 @@ namespace GitTfs.Test.Commands
 
         #region Init a Branch
         [Fact]
-        public void ShouldInitBranchWhenNoBranchGitNameProposed()
-        {
-            ShouldInitBranch(null);
-        }
+        public void ShouldInitBranchWhenNoBranchGitNameProposed() => ShouldInitBranch(null);
 
         [Fact]
-        public void ShouldInitBranchWhenBranchGitNameProposed()
-        {
-            ShouldInitBranch("MyBranch");
-        }
+        public void ShouldInitBranchWhenBranchGitNameProposed() => ShouldInitBranch("MyBranch");
 
         private void ShouldInitBranch(string expectedGitBranchName)
         {

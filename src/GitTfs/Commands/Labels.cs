@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Text.RegularExpressions;
 using NDesk.Options;
 using GitTfs.Core;
@@ -29,11 +28,7 @@ namespace GitTfs.Commands
             _authors = authors;
         }
 
-        public OptionSet OptionSet
-        {
-            get
-            {
-                return new OptionSet
+        public OptionSet OptionSet => new OptionSet
                 {
                     { "all|fetch-all", "Fetch all the labels on all the TFS remotes (For TFS 2010 and later)", v => LabelAllBranches = v != null },
                     { "n|label-name=", "Fetch all the labels respecting this name filter", v => NameFilter = v },
@@ -41,13 +36,8 @@ namespace GitTfs.Commands
                     { "u|username=", "TFS username", v => TfsUsername = v },
                     { "p|password=", "TFS password", v => TfsPassword = v },
                 };
-            }
-        }
 
-        public int Run(IGitTfsRemote remote)
-        {
-            return CreateLabelsForTfsBranch(remote);
-        }
+        public int Run(IGitTfsRemote remote) => CreateLabelsForTfsBranch(remote);
 
         private int Run(string remoteId)
         {

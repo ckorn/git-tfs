@@ -1,6 +1,4 @@
 ﻿using LibGit2Sharp;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace GitTfs.Core
 {
@@ -62,10 +60,7 @@ namespace GitTfs.Core
             }
         }
 
-        private KeyValuePair<string, string> c(string key, string value)
-        {
-            return new KeyValuePair<string, string>(key, value);
-        }
+        private KeyValuePair<string, string> c(string key, string value) => new KeyValuePair<string, string>(key, value);
 
         public IEnumerable<KeyValuePair<string, string>> Delete(string remoteId)
         {

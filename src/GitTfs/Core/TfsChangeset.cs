@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
+
 using GitTfs.Core.TfsInterop;
 using GitTfs.Util;
 
@@ -79,25 +76,13 @@ namespace GitTfs.Core
             }
         }
 
-        private void Ignore(string pathInGitRepo)
-        {
-            Trace.TraceInformation(string.Format("C{0} ! No changes applied to '{1}', file ignored", _changeset.ChangesetId, pathInGitRepo));
-        }
+        private void Ignore(string pathInGitRepo) => Trace.TraceInformation($"C{_changeset.ChangesetId} ! No changes applied to '{pathInGitRepo}', file ignored");
 
-        public IEnumerable<TfsTreeEntry> GetTree()
-        {
-            return GetFullTree().Where(item => item.Item.ItemType == TfsItemType.File && !Summary.Remote.ShouldSkip(item.FullName));
-        }
+        public IEnumerable<TfsTreeEntry> GetTree() => GetFullTree().Where(item => item.Item.ItemType == TfsItemType.File && !Summary.Remote.ShouldSkip(item.FullName));
 
-        public bool IsMergeChangeset
-        {
-            get
-            {
-                if (_changeset == null || _changeset.Changes == null || !_changeset.Changes.Any())
-                    return false;
-                return _changeset.Changes.Any(c => c.ChangeType.IncludesOneOf(TfsChangeType.Merge));
-            }
-        }
+        public bool IsMergeChangeset => _changeset == null || _changeset.Changes == null || !_changeset.Changes.Any()
+                    ? false
+                    : _changeset.Changes.Any(c => c.ChangeType.IncludesOneOf(TfsChangeType.Merge));
 
         public IEnumerable<TfsTreeEntry> GetFullTree()
         {
@@ -171,10 +156,7 @@ namespace GitTfs.Core
             return string.IsNullOrEmpty(Summary.Remote.TfsRepositoryPath) ? "" : Summary.Remote.Prefix;
         }
 
-        private LogEntry MakeNewLogEntry()
-        {
-            return MakeNewLogEntry(_changeset, Summary.Remote);
-        }
+        private LogEntry MakeNewLogEntry() => MakeNewLogEntry(_changeset, Summary.Remote);
 
         private LogEntry MakeNewLogEntry(IChangeset changesetToLog, IGitTfsRemote remote = null)
         {
@@ -216,7 +198,7 @@ namespace GitTfs.Core
                 if (split.Length == 2)
                 {
                     name = split[1].ToLower();
-                    email = string.Format("{0}@{1}.tfs.local", name, split[0].ToLower());
+                    email = $"{name}@{split[0].ToLower()}.tfs.local";
                 }
 				Trace.WriteLine($"Author by {changesetToLog.Committer}: {name} {email}");
             }

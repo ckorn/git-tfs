@@ -22,7 +22,7 @@ const string ApplicationName = "GitTfs";
 const string ZipFileTemplate = ApplicationName + "-{0}.zip";
 const string ApplicationPath = "./" + ApplicationName;
 const string PathToSln = ApplicationPath + ".sln";
-const string TargetFramework = "net472"; //due to new dotnet csproj format
+const string TargetFramework = "net48"; //due to new dotnet csproj format
 readonly var OutDir = "bin/" + Configuration + "/" + TargetFramework + "/";
 const string buildAssetPath = @".\.build\";
 const string DownloadUrlTemplate ="https://github.com/git-tfs/git-tfs/releases/download/v{0}/";
@@ -52,13 +52,13 @@ Task("Help").Description("This help...")
 	Information(
 @"Trigger the release process to AppVeyor:
 ----------------------------------------
-1. Setup the personal data in `PersonalTokens.config` file
-2. run `.\build.ps1 -Target ""TriggerRelease""`
+1. Setup the personal data in `PersonalTokens.config` file in the repo root folder.
+2. From `src` folder, run `.\build.ps1 -Target ""TriggerRelease""`
 
 Release process from local machine:
 -----------------------------------
-1. Setup the personal data in `PersonalTokens.config` file
-2. run `.\build.ps1 -Target ""Release"" -Configuration ""Release""`
+1. Setup the personal data in `PersonalTokens.config` file in the repo root folder.
+2. From `src` folder, run `.\build.ps1 -Target ""Release"" -Configuration ""Release""`
 
 Example with parameters:
 ------------------------
@@ -145,10 +145,8 @@ Task("Clean").Description("Clean the working directory")
 Task("Restore-NuGet-Packages").Description("Restore nuget dependencies (with paket)")
 	.Does(() =>
 {
-	if(FileExists("paket.exe"))
-		StartProcess("paket.exe", "restore");
-	else
-		StartProcess(@".paket\paket.exe", "restore");
+	StartProcess(FileExists("paket.exe") ? "paket.exe" : @".paket\paket.exe", "restore");
+	StartProcess("dotnet", $"restore {PathToSln}");
 });
 
 Task("Version").Description("Get the version using GitVersion")
@@ -168,6 +166,7 @@ Task("Version").Description("Get the version using GitVersion")
 	_zipFilename = string.Format(ZipFileTemplate, _semanticVersionShort + postFix);
 	_zipFilePath = System.IO.Path.Combine(buildAssetPath, _zipFilename);
 	_downloadUrl = string.Format(DownloadUrlTemplate, _semanticVersionShort) + _zipFilename;
+
 	_releaseVersion = "v" + _semanticVersionShort;
 
 	_appVeyorBuildVersion = _semanticVersionShort
@@ -205,20 +204,20 @@ Task("Build").Description("Build git-tfs")
 	.IsDependentOn("UpdateAssemblyInfo")
 	.Does(() =>
 {
-	//	MSBuild(PathToSln, settings => {
-	//	settings.WithTarget("restore");
-	//});
 
-	// Use MSBuild
+  // Use MSBuild
 	// /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /nologo /p:BuildInParallel=true /m:4
 	MSBuild(PathToSln, settings => {
 
 		settings.SetConfiguration(Configuration)
 			.SetVerbosity(Verbosity.Minimal)
-			.SetMaxCpuCount(4);
+			.SetMaxCpuCount(4)
+			.UseToolVersion(MSBuildToolVersion.VS2022)
+			;
 		settings.WithTarget("GitTfs_Vs2015")
 			.WithTarget("GitTfs_Vs2017")
 			.WithTarget("GitTfs_Vs2019")
+			.WithTarget("GitTfs_Vs2022")
 			.WithTarget(TestProjectName);
 	});
 });
@@ -265,14 +264,14 @@ Task("Run-Unit-Tests").Description("Run the unit tests")
 		Information("Upload coverage to AppVeyor...");
 		BuildSystem.AppVeyor.UploadArtifact(coverageFile);
 	}
-	if(BuildSystem.IsRunningOnVSTS)
+	if(BuildSystem.IsRunningOnAzurePipelinesHosted)
 	{
 		Information("Upload coverage to VSTS...");
-		BuildSystem.TFBuild.Commands.UploadArtifact("reports", coverageFile, "coverage.xml");
+		BuildSystem.AzurePipelines.Commands.UploadArtifact("reports", coverageFile, "coverage.xml");
 	}
 
 	var coverageResultFolder = System.IO.Path.Combine(buildAssetPath, "coverage");
-	ReportGenerator(coverageFile, coverageResultFolder, new ReportGeneratorSettings(){
+	ReportGenerator(new FilePath(coverageFile), coverageResultFolder, new ReportGeneratorSettings(){
 		ToolPath = @".\packages\build\ReportGenerator\tools\net47\ReportGenerator.exe"
 	});
 	if(!BuildSystem.IsLocalBuild)
@@ -284,10 +283,10 @@ Task("Run-Unit-Tests").Description("Run the unit tests")
 			Information("Upload coverage zipped to AppVeyor...");
 			BuildSystem.AppVeyor.UploadArtifact(coverageZip);
 		}
-		if(BuildSystem.IsRunningOnVSTS)
+		if(BuildSystem.IsRunningOnAzurePipelinesHosted)
 		{
 			Information("Upload coverage zipped to VSTS...");
-			BuildSystem.TFBuild.Commands.UploadArtifact("reports", coverageZip, "coverage.zip");
+			BuildSystem.AzurePipelines.Commands.UploadArtifact("reports", coverageZip, "coverage.zip");
 		}
 	}
 });
@@ -341,18 +340,19 @@ Task("Package").Description("Generate the release zip file")
 			Information("Upload artifacts to AppVeyor...");
 			BuildSystem.AppVeyor.UploadArtifact(_zipFilePath);
 		}
-		if(BuildSystem.IsRunningOnVSTS)
+		if(BuildSystem.IsRunningOnAzurePipelinesHosted)
 		{
 			Information("Upload artifacts to VSTS...");
-			BuildSystem.TFBuild.Commands.UploadArtifact("install", _zipFilePath, _zipFilename);
+			BuildSystem.AzurePipelines.Commands.UploadArtifact("install", _zipFilePath, _zipFilename);
 		}
 	}
 });
 
-void DisplayAuthTokenErrorMessage()
+void DisplayAuthTokenErrorMessage(string error)
 {
 	var errorMessage = @"Please create a file 'PersonalTokens.config' containing your authentication tokens
-See the file 'PersonalTokens.config.example' for the format and content.";
+See the file 'PersonalTokens.config.example' for the format and content.
+Error: " + error;
 
 	throw new Exception(errorMessage);
 }
@@ -361,23 +361,26 @@ string ReadToken(string tokenKey, string tokenRegexFormat = null)
 {
 	var authTargetsFile = @"..\PersonalTokens.config";
 
-	Information("Reading token..." + tokenKey);
+	Information($"Reading token '{tokenKey}'...");
 
 	if(!FileExists(authTargetsFile))
-		DisplayAuthTokenErrorMessage();
+		DisplayAuthTokenErrorMessage("File not found");
 
 	var personalToken = System.IO.File.ReadAllLines(authTargetsFile).FirstOrDefault(l => l.StartsWith(tokenKey + "="));
 	if(personalToken == null)
-		DisplayAuthTokenErrorMessage();
+		DisplayAuthTokenErrorMessage("Key not found in file");
 
 	personalToken = personalToken.Trim();
-	personalToken = personalToken.Substring(tokenKey.Length+1,personalToken.Length-tokenKey.Length-1);
+	personalToken = personalToken.Substring(tokenKey.Length+1, personalToken.Length-tokenKey.Length-1);
 	if(tokenRegexFormat == null)
+	{
+		Information($"Value found!");
 		return personalToken;
+	}
 
 	var regexToken = new System.Text.RegularExpressions.Regex(tokenRegexFormat);
 	if(!regexToken.IsMatch(personalToken))
-		DisplayAuthTokenErrorMessage();
+		DisplayAuthTokenErrorMessage($"Format of value found not valid: {tokenRegexFormat}" + (BuildSystem.IsLocalBuild ? $" / {personalToken}" : ""));
 	return personalToken;
 }
 
@@ -435,7 +438,7 @@ string GetGithubAuthToken()
 		return token;
 	}
 
-	return ReadToken("GitHub", "^[0-9a-f]{40}$");
+	return ReadToken("GitHub", @"^ghp_[\d\w]{36}$");
 }
 
 string ReadReleaseNotes()
@@ -570,10 +573,14 @@ Task("Chocolatey").Description("Generate the chocolatey package")
 	CopyFiles(@".\build\ChocolateyTemplates\*.*", ChocolateyBuildDir);
 	var nuspecPathInBuildDir = System.IO.Path.Combine(ChocolateyBuildDir, "gittfs.nuspec");
 
+	var sha256 = CalculateFileHash(_zipFilePath);
+	Information($"Hash ({sha256.Algorithm:G}):" + sha256.ToHex());
+
 	//Template 'chocolateyInstall.ps1'
 	var installScriptPathInBuildDir = System.IO.Path.Combine(ChocolateyBuildDir, "chocolateyInstall.ps1");
 	string text = TransformTextFile(installScriptPathInBuildDir, "${", "}")
 		.WithToken("DownloadUrl", _downloadUrl)
+		.WithToken("Checksum", sha256.ToHex())
 		.ToString();
 	System.IO.File.WriteAllText(installScriptPathInBuildDir, text);
 
@@ -598,10 +605,10 @@ Task("Chocolatey").Description("Generate the chocolatey package")
 		Information("Uploading chocolatey package as AppVeyor artifact...");
 		BuildSystem.AppVeyor.UploadArtifact(chocolateyPackagePath);
 	}
-	if(BuildSystem.IsRunningOnVSTS)
+	if(BuildSystem.IsRunningOnAzurePipelinesHosted)
 	{
 		Information("Uploading chocolatey package as VSTS artifact...");
-		BuildSystem.TFBuild.Commands.UploadArtifact("install", chocolateyPackagePath, chocolateyPackage);
+		BuildSystem.AzurePipelines.Commands.UploadArtifact("install", chocolateyPackagePath, chocolateyPackage);
 	}
 
 	if(!runInDryRun)
@@ -609,7 +616,6 @@ Task("Chocolatey").Description("Generate the chocolatey package")
 		ChocolateyPush(chocolateyPackagePath, new ChocolateyPushSettings {
 			Source				= "https://chocolatey.org/",
 			ApiKey				= GetChocolateyToken(),
-			Timeout				= TimeSpan.FromSeconds(300),
 			Debug				= false,
 			Verbose				= false,
 			Force				= false,
@@ -622,20 +628,8 @@ Task("Chocolatey").Description("Generate the chocolatey package")
 	}
 	else
 	{
-		Information("[DryRun] Should upload chocolatey package...");
+		Information($"[DryRun] Would have uploaded chocolatey package '{chocolateyPackagePath}'...");
 	}
-});
-
-Task("FormatCode").Description("Format c# code source to keep formatting consistent")
-	.Does(() =>
-{
-	var codeFormatter = @"packages\build\Octokit.CodeFormatter\tools\CodeFormatter.exe";
-	var args = "GitTfs.sln /rule-:FieldNames /nounicode /nocopyright";
-	Information("Will run:" + codeFormatter + " " + args);
-	var exitCode = StartProcess(codeFormatter, new ProcessSettings
-	{
-		Arguments = args
-	});
 });
 
 //////////////////////////////////////////////////////////////////////

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using GitTfs.Core.TfsInterop;
 using GitTfs.Commands;
 
@@ -85,9 +83,6 @@ namespace GitTfs.Core
 
     public static class IGitTfsRemoteExt
     {
-        public static IFetchResult FetchWithMerge(this IGitTfsRemote remote, int mergeChangesetId, bool stopOnFailMergeCommit = false, params string[] parentCommitsHashes)
-        {
-            return remote.FetchWithMerge(mergeChangesetId, stopOnFailMergeCommit, null, parentCommitsHashes);
-        }
+        public static IFetchResult FetchWithMerge(this IGitTfsRemote remote, int mergeChangesetId, bool stopOnFailMergeCommit = false, params string[] parentCommitsHashes) => remote.FetchWithMerge(mergeChangesetId, stopOnFailMergeCommit, null, parentCommitsHashes);
     }
 }

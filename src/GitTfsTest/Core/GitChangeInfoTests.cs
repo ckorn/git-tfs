@@ -1,8 +1,8 @@
-﻿using System;
-using System.Linq;
-using GitTfs.Core;
+﻿using GitTfs.Core;
 using GitTfs.Core.Changes.Git;
+
 using StructureMap;
+
 using Xunit;
 
 namespace GitTfs.Test.Core
@@ -170,11 +170,8 @@ namespace GitTfs.Test.Core
         }
 
         [Fact]
-        public void ThrowsOnIncorrectInputLine()
-        {
-            Assert.Throws<Exception>(() =>
-                GetChangeItem(":100644 100644 abcdef0123abcdef0123abcdef0123abcdef0123 01234567ab01234567ab01234567ab01234567ab R001\tblah\tnewblah"));
-        }
+        public void ThrowsOnIncorrectInputLine() => Assert.Throws<Exception>(() =>
+                                                                 GetChangeItem(":100644 100644 abcdef0123abcdef0123abcdef0123abcdef0123 01234567ab01234567ab01234567ab01234567ab R001\tblah\tnewblah"));
 
         [Fact]
         public void MultipleChanges()

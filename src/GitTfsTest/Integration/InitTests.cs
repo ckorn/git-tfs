@@ -1,6 +1,5 @@
-﻿using System;
-using System.IO;
-using GitTfs.Core.TfsInterop;
+﻿using GitTfs.Core.TfsInterop;
+
 using Xunit.Abstractions;
 
 namespace GitTfs.Test.Integration
@@ -17,10 +16,7 @@ namespace GitTfs.Test.Integration
             _output.WriteLine("Repository in folder: " + h.Workdir);
         }
 
-        public void Dispose()
-        {
-            h.Dispose();
-        }
+        public void Dispose() => h.Dispose();
 
         [FactExceptOnUnix]
         public void InitializesConfig()

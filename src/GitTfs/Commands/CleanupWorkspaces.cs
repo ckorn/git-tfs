@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using NDesk.Options;
 using GitTfs.Core;
 using StructureMap;
@@ -21,10 +20,7 @@ namespace GitTfs.Commands
             _cleanupOptions = cleanupOptions;
         }
 
-        public OptionSet OptionSet
-        {
-            get { return _cleanupOptions.OptionSet; }
-        }
+        public OptionSet OptionSet => _cleanupOptions.OptionSet;
 
         public int Run()
         {

@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using GitTfs.Core.TfsInterop;
 
 namespace GitTfs.Test.Core
@@ -18,11 +15,11 @@ namespace GitTfs.Test.Core
             policyFailures = new HashSet<IPolicyFailure>();
         }
 
-        public ICheckinConflict[] Conflicts { get { return conflicts.ToArray(); } }
+        public ICheckinConflict[] Conflicts => conflicts.ToArray();
 
-        public ICheckinNoteFailure[] NoteFailures { get { return noteFailures.ToArray(); } }
+        public ICheckinNoteFailure[] NoteFailures => noteFailures.ToArray();
 
-        public IPolicyFailure[] PolicyFailures { get { return policyFailures.ToArray(); } }
+        public IPolicyFailure[] PolicyFailures => policyFailures.ToArray();
 
         public Exception PolicyEvaluationException { get; set; }
 
@@ -55,10 +52,7 @@ namespace GitTfs.Test.Core
             return this;
         }
 
-        public StubbedCheckinEvaluationResult WithException(string message)
-        {
-            return WithException(new Exception(message ?? string.Empty));
-        }
+        public StubbedCheckinEvaluationResult WithException(string message) => WithException(new Exception(message ?? string.Empty));
     }
 
     public class StubbedCheckinConflict : ICheckinConflict

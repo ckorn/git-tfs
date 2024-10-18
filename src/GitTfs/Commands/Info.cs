@@ -1,7 +1,5 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 using NDesk.Options;
 using StructureMap;
 using GitTfs.Core;
@@ -22,7 +20,7 @@ namespace GitTfs.Commands
             _versionProvider = versionProvider;
         }
 
-        public OptionSet OptionSet { get { return _globals.OptionSet; } }
+        public OptionSet OptionSet => _globals.OptionSet;
 
         public int Run()
         {
@@ -61,7 +59,7 @@ namespace GitTfs.Commands
         {
             try
             {
-                var repoDescription = File.ReadAllLines(@".git\description");
+                var repoDescription = File.ReadAllLines(Path.Combine(_globals.GitDir, "description"));
                 if (repoDescription.Length == 0 || !repoDescription[0].StartsWith("$/"))
                     return;
 
@@ -82,9 +80,6 @@ namespace GitTfs.Commands
             Trace.TraceInformation("               {0} - {1} @ {2}", remote.RemoteRef, remote.MaxCommitHash, remote.MaxChangesetId);
         }
 
-        private void DisplayReadabilityLineJump()
-        {
-            Trace.TraceInformation(string.Empty);
-        }
+        private void DisplayReadabilityLineJump() => Trace.TraceInformation(string.Empty);
     }
 }

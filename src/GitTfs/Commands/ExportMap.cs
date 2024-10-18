@@ -1,9 +1,10 @@
 ﻿using System.ComponentModel;
-using System.IO;
+
 using GitTfs.Core;
+
 using NDesk.Options;
+
 using StructureMap;
-using System.Linq;
 
 namespace GitTfs.Commands
 {
@@ -23,17 +24,11 @@ namespace GitTfs.Commands
 
         public string FilePath { get; set; }
 
-        public OptionSet OptionSet
-        {
-            get
-            {
-                return new OptionSet
+        public OptionSet OptionSet => new OptionSet
                 {
                      { "f|file=", "The output file path",
                         f => FilePath = f }
                 };
-            }
-        }
 
         public int Run()
         {

@@ -1,4 +1,3 @@
-using System;
 using Xunit;
 
 namespace GitTfs.Test
@@ -14,15 +13,9 @@ namespace GitTfs.Test
                 return base.Skip;
             }
 
-            set
-            {
-                base.Skip = value;
-            }
+            set => base.Skip = value;
         }
 
-        private bool IsUnix()
-        {
-            return Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX;
-        }
+        private bool IsUnix() => Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX;
     }
 }

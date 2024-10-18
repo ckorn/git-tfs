@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using NDesk.Options;
 using GitTfs.Core;
 using StructureMap;
@@ -19,17 +18,11 @@ namespace GitTfs.Commands
             _globals = globals;
         }
 
-        public OptionSet OptionSet
-        {
-            get
-            {
-                return new OptionSet
+        public OptionSet OptionSet => new OptionSet
                 {
                     { "b|branch=", "Name of the branch to create", v => BranchName = v },
                     { "n|dry-run", "Don't checkout the commit, just return commit sha", v => ReturnShaOnly = v != null },
                 };
-            }
-        }
 
 
         protected string BranchName { get; set; }

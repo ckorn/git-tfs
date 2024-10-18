@@ -1,8 +1,5 @@
-using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using NDesk.Options;
 using GitTfs.Core;
 using StructureMap;
@@ -30,22 +27,12 @@ namespace GitTfs.Commands
             globals.GcCountdown = globals.GcPeriod;
         }
 
-        public OptionSet OptionSet
-        {
-            get
-            {
-                return _init.OptionSet.Merge(_fetch.OptionSet)
+        public OptionSet OptionSet => _init.OptionSet.Merge(_fetch.OptionSet)
                            .Add("resumable", "if an error occurred, try to continue when you restart clone with same parameters", v => _resumable = v != null);
-            }
-        }
 
         public int Run(string tfsUrl, string tfsRepositoryPath)
         {
-            string gitRepositoryPath;
-            if (tfsRepositoryPath == GitTfsConstants.TfsRoot)
-                gitRepositoryPath = "tfs-collection";
-            else
-                gitRepositoryPath = Path.GetFileName(tfsRepositoryPath);
+            string gitRepositoryPath = tfsRepositoryPath == GitTfsConstants.TfsRoot ? "tfs-collection" : Path.GetFileName(tfsRepositoryPath);
             return Run(tfsUrl, tfsRepositoryPath, gitRepositoryPath);
         }
 
@@ -96,13 +83,13 @@ namespace GitTfs.Commands
                     catch (IOException e)
                     {
                         // swallow IOException. Smth went wrong before this and we're much more interested in that error
-                        string msg = string.Format("warning: Something went wrong while cleaning file after internal error (See below).\n    Can't clean up files because of IOException:\n{0}\n", e.IndentExceptionMessage());
+                        string msg = $"warning: Something went wrong while cleaning file after internal error (See below).\n    Can't clean up files because of IOException:\n{e.IndentExceptionMessage()}\n";
                         Trace.WriteLine(msg);
                     }
                     catch (UnauthorizedAccessException e)
                     {
                         // swallow it also
-                        string msg = string.Format("warning: Something went wrong while cleaning file after internal error (See below).\n    Can't clean up files because of UnauthorizedAccessException:\n{0}\n", e.IndentExceptionMessage());
+                        string msg = $"warning: Something went wrong while cleaning file after internal error (See below).\n    Can't clean up files because of UnauthorizedAccessException:\n{e.IndentExceptionMessage()}\n";
                         Trace.WriteLine(msg);
                     }
                 }

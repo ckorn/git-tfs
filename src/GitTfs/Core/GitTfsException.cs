@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace GitTfs.Core
+﻿namespace GitTfs.Core
 {
     public class GitTfsException : Exception
     {
@@ -32,7 +29,7 @@ namespace GitTfs.Core
             if (RecommendedSolutions == null)
                 RecommendedSolutions = (IEnumerable<string>)recommendations.Clone();
             else
-                RecommendedSolutions = RecommendedSolutions.Append<string>(recommendations);
+                RecommendedSolutions = RecommendedSolutions.Append(recommendations);
             return this;
         }
     }

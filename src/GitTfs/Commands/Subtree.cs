@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using NDesk.Options;
 using GitTfs.Core;
 using StructureMap;
@@ -23,11 +19,7 @@ namespace GitTfs.Commands
         private string Prefix;
         private bool Squash;
 
-        public OptionSet OptionSet
-        {
-            get
-            {
-                return new OptionSet
+        public OptionSet OptionSet => new OptionSet
                 {
                     { "p|prefix=",
                         v => Prefix = v},
@@ -37,8 +29,6 @@ namespace GitTfs.Commands
                     //                        v => RevisionToFetch = Convert.ToInt32(v) },
                 }
                 .Merge(_fetch.OptionSet);
-            }
-        }
 
         public Subtree(Fetch fetch, QuickFetch quickFetch, Globals globals, RemoteOptions remoteOptions)
         {
@@ -148,15 +138,11 @@ namespace GitTfs.Commands
 
                 int latest = Math.Max(owner.MaxChangesetId, remote.MaxChangesetId);
                 string msg = string.Format(GitTfsConstants.TfsCommitInfoFormat, owner.TfsUrl, owner.TfsRepositoryPath, latest);
-                msg = string.Format(@"Add '{0}/' from commit '{1}'
+                msg = $@"Add '{Prefix}/' from commit '{remote.MaxCommitHash}'
 
-{2}", Prefix, remote.MaxCommitHash, msg);
+{msg}";
 
-                _globals.Repository.CommandNoisy(
-                    "subtree", "add",
-                    "--prefix=" + p,
-                    string.Format("-m {0}", msg),
-                    remote.RemoteRef);
+                _globals.Repository.CommandNoisy("subtree", "add", "--prefix=" + p, $"-m {msg}", remote.RemoteRef);
 
                 //update the owner remote to point at the commit where the newly created subtree was merged.
                 var commit = _globals.Repository.GetCurrentCommit();
@@ -213,7 +199,7 @@ namespace GitTfs.Commands
         {
             if (!Directory.Exists(Prefix))
             {
-                throw new GitTfsException(string.Format("Directory {0} does not exist", Prefix))
+                throw new GitTfsException($"Directory {Prefix} does not exist")
                     .WithRecommendation("Add the subtree using 'git tfs subtree add -p=<prefix> [tfs-server] [tfs-repository]'");
             }
         }

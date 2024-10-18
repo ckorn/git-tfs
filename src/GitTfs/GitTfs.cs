@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using StructureMap;
 using GitTfs.Commands;
 using GitTfs.Core;
@@ -88,10 +84,7 @@ namespace GitTfs
             }
         }
 
-        public bool RequiresValidGitRepository(GitTfsCommand command)
-        {
-            return !command.GetType().GetCustomAttributes(typeof(RequiresValidGitRepositoryAttribute), false).IsEmpty();
-        }
+        public bool RequiresValidGitRepository(GitTfsCommand command) => !command.GetType().GetCustomAttributes(typeof(RequiresValidGitRepositoryAttribute), false).IsEmpty();
 
         private void ParseAuthorsAndSave(bool couldSaveAuthorFile)
         {
@@ -169,9 +162,6 @@ namespace GitTfs
             return _container.GetInstance<Help>();
         }
 
-        public IList<string> ParseOptions(GitTfsCommand command, IList<string> args)
-        {
-            return command.GetAllOptions(_container).Parse(args);
-        }
+        public IList<string> ParseOptions(GitTfsCommand command, IList<string> args) => command.GetAllOptions(_container).Parse(args);
     }
 }

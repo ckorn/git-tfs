@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Linq;
 using NDesk.Options;
 using StructureMap;
 using GitTfs.Core;
@@ -21,13 +20,7 @@ namespace GitTfs.Commands
             _remoteOptions = remoteOptions;
         }
 
-        public OptionSet OptionSet
-        {
-            get
-            {
-                return _remoteOptions.OptionSet;
-            }
-        }
+        public OptionSet OptionSet => _remoteOptions.OptionSet;
 
         public int Run(string tfsUrl)
         {

@@ -1,10 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+
 using GitTfs.Commands;
 using GitTfs.Core.TfsInterop;
 using GitTfs.Util;
@@ -83,15 +80,9 @@ namespace GitTfs.Core
             isTfsAuthenticated = true;
         }
 
-        public bool IsDerived
-        {
-            get { return false; }
-        }
+        public bool IsDerived => false;
 
-        public int? GetFirstChangeset()
-        {
-            return firstChangesetId;
-        }
+        public int? GetFirstChangeset() => firstChangesetId;
 
         public void SetFirstChangeset(int? changesetId)
         {
@@ -101,20 +92,11 @@ namespace GitTfs.Core
 
         public bool IsSubtree { get; }
 
-        public bool IsSubtreeOwner
-        {
-            get
-            {
-                return TfsRepositoryPath == null;
-            }
-        }
+        public bool IsSubtreeOwner => TfsRepositoryPath == null;
 
         public string Id { get; }
 
-        public string TfsUrl
-        {
-            get { return Tfs.Url; }
-        }
+        public string TfsUrl => Tfs.Url;
 
         private string[] Aliases { get; set; }
 
@@ -122,14 +104,14 @@ namespace GitTfs.Core
 
         public string TfsUsername
         {
-            get { return Tfs.Username; }
-            set { Tfs.Username = value; }
+            get => Tfs.Username;
+            set => Tfs.Username = value;
         }
 
         public string TfsPassword
         {
-            get { return Tfs.Password; }
-            set { Tfs.Password = value; }
+            get => Tfs.Password;
+            set => Tfs.Password = value;
         }
 
         public string TfsRepositoryPath { get; }
@@ -167,7 +149,7 @@ namespace GitTfs.Core
         public int MaxChangesetId
         {
             get { InitHistory(); return maxChangesetId.Value; }
-            set { maxChangesetId = value; }
+            set => maxChangesetId = value;
         }
 
         // MaxCommitHash is the hash of the most recent commit of any type on the remote
@@ -178,13 +160,10 @@ namespace GitTfs.Core
         public string MaxCommitHash
         {
             get { InitHistory(); return maxCommitHash; }
-            set { maxCommitHash = value; }
+            set => maxCommitHash = value;
         }
 
-        private TfsChangesetInfo GetTfsChangesetById(int id)
-        {
-            return Repository.GetTfsChangesetById(RemoteRef, id);
-        }
+        private TfsChangesetInfo GetTfsChangesetById(int id) => Repository.GetTfsChangesetById(RemoteRef, id);
 
         private void InitHistory()
         {
@@ -234,18 +213,9 @@ namespace GitTfs.Core
             }
         }
 
-        private string DefaultWorkingDirectory
-        {
-            get
-            {
-                return Path.Combine(_globals.GitDir, WorkspaceDirectory);
-            }
-        }
+        private string DefaultWorkingDirectory => Path.Combine(_globals.GitDir, WorkspaceDirectory);
 
-        public void CleanupWorkspace()
-        {
-            Tfs.CleanupWorkspaces(WorkingDirectory);
-        }
+        public void CleanupWorkspace() => Tfs.CleanupWorkspaces(WorkingDirectory);
 
         public void CleanupWorkspaceDirectory()
         {
@@ -266,20 +236,11 @@ namespace GitTfs.Core
             }
         }
 
-        public bool ShouldSkip(string path)
-        {
-            return IsInDotGit(path) || IsIgnored(path);
-        }
+        public bool ShouldSkip(string path) => IsInDotGit(path) || IsIgnored(path);
 
-        public bool IsIgnored(string path)
-        {
-            return Ignorance.IsIncluded(path) || IsPathIgnored(path);
-        }
+        public bool IsIgnored(string path) => Ignorance.IsIncluded(path) || IsPathIgnored(path);
 
-        private bool IsPathIgnored(string path)
-        {
-            return _useGitIgnore && Repository.IsPathIgnored(path);
-        }
+        private bool IsPathIgnored(string path) => _useGitIgnore && Repository.IsPathIgnored(path);
 
         private Bouncer _ignorance;
         private Bouncer Ignorance
@@ -298,10 +259,7 @@ namespace GitTfs.Core
             }
         }
 
-        public bool IsInDotGit(string path)
-        {
-            return isInDotGit.IsMatch(path);
-        }
+        public bool IsInDotGit(string path) => isInDotGit.IsMatch(path);
 
         public string GetPathInGitRepo(string tfsPath)
         {
@@ -354,15 +312,9 @@ namespace GitTfs.Core
             public string LastParentCommitBeforeRename { get; set; }
         }
 
-        public IFetchResult Fetch(bool stopOnFailMergeCommit = false, int lastChangesetIdToFetch = -1, IRenameResult renameResult = null)
-        {
-            return FetchWithMerge(-1, stopOnFailMergeCommit, lastChangesetIdToFetch, renameResult);
-        }
+        public IFetchResult Fetch(bool stopOnFailMergeCommit = false, int lastChangesetIdToFetch = -1, IRenameResult renameResult = null) => FetchWithMerge(-1, stopOnFailMergeCommit, lastChangesetIdToFetch, renameResult);
 
-        public IFetchResult FetchWithMerge(int mergeChangesetId, bool stopOnFailMergeCommit = false, IRenameResult renameResult = null, params string[] parentCommitsHashes)
-        {
-            return FetchWithMerge(mergeChangesetId, stopOnFailMergeCommit, -1, renameResult, parentCommitsHashes);
-        }
+        public IFetchResult FetchWithMerge(int mergeChangesetId, bool stopOnFailMergeCommit = false, IRenameResult renameResult = null, params string[] parentCommitsHashes) => FetchWithMerge(mergeChangesetId, stopOnFailMergeCommit, -1, renameResult, parentCommitsHashes);
 
         public IFetchResult FetchWithMerge(int mergeChangesetId, bool stopOnFailMergeCommit = false, int lastChangesetIdToFetch = -1, IRenameResult renameResult = null, params string[] parentCommitsHashes)
         {
@@ -375,6 +327,11 @@ namespace GitTfs.Core
                 return fetchResult;
             string abortFile = Path.Combine(Path.GetTempPath(), "git-tfs-fetch-abort");
 
+            // If a branch is the result of a branch rename operation,
+            // the first commit on the branch will be the rename commit.
+            // In this case, we still want to fetch it, and we use firstOnBranch
+            // to track this state.
+            bool firstOnBranch = true;
             bool fetchRetrievedChangesets;
 
             var changeSetsToIgnore = Tfs.ChangeSetNumbersToIgnore();
@@ -387,6 +344,11 @@ namespace GitTfs.Core
                 fetchRetrievedChangesets = false;
                 foreach (var changeset in fetchedChangesets)
                 {
+                    if (firstOnBranch &&
+                        _properties.InitialChangeset.HasValue &&
+                        changeset.Summary.ChangesetId >= _properties.InitialChangeset.Value)
+                        firstOnBranch = false;
+
                     fetchRetrievedChangesets = true;
                     if (lastChangesetIdToFetch > 0 && changeset.Summary.ChangesetId > lastChangesetIdToFetch)
                         return fetchResult;
@@ -417,7 +379,7 @@ namespace GitTfs.Core
                     var parentSha = (renameResult != null && renameResult.IsProcessingRenameChangeset) ? renameResult.LastParentCommitBeforeRename : MaxCommitHash;
                     var isFirstTFSCommitInRepository = (MaxChangesetId == 0);
                     var log = Apply(parentSha, changeset, objects);
-                    if (changeset.IsRenameChangeset && !isFirstTFSCommitInRepository)
+                    if (changeset.IsRenameChangeset && !isFirstTFSCommitInRepository && !firstOnBranch)
                     {
                         if (renameResult == null || !renameResult.IsProcessingRenameChangeset)
                         {
@@ -450,10 +412,7 @@ namespace GitTfs.Core
         }
 
 
-        private Dictionary<string, GitObject> BuildEntryDictionary()
-        {
-            return new Dictionary<string, GitObject>(StringComparer.InvariantCultureIgnoreCase);
-        }
+        private Dictionary<string, GitObject> BuildEntryDictionary() => new Dictionary<string, GitObject>(StringComparer.InvariantCultureIgnoreCase);
 
         private bool ProcessMergeChangeset(ITfsChangeset changeset, bool stopOnFailMergeCommit, ref string parentCommit)
         {
@@ -564,7 +523,7 @@ namespace GitTfs.Core
                             workitemUrl = workitemUrl.Replace(oldWorkitemId, workitemId);
                         }
                     }
-                    workitemNote += string.Format("[{0}] {1}\n    {2}\n", workitemId, workitem.Title, workitemUrl);
+                    workitemNote += $"[{workitemId}] {workitem.Title}\n    {workitemUrl}\n";
                 }
                 metadatas.Append(workitemNote);
             }
@@ -610,10 +569,7 @@ namespace GitTfs.Core
             return FindRemoteAndFetch(parentChangesetId, false, false, renameResult, out omittedParentBranch);
         }
 
-        private string FindMergedRemoteAndFetch(int parentChangesetId, bool stopOnFailMergeCommit, out string omittedParentBranch)
-        {
-            return FindRemoteAndFetch(parentChangesetId, false, true, null, out omittedParentBranch);
-        }
+        private string FindMergedRemoteAndFetch(int parentChangesetId, bool stopOnFailMergeCommit, out string omittedParentBranch) => FindRemoteAndFetch(parentChangesetId, false, true, null, out omittedParentBranch);
 
         private string FindRemoteAndFetch(int parentChangesetId, bool stopOnFailMergeCommit, bool mergeChangeset, IRenameResult renameResult, out string omittedParentBranch)
         {
@@ -710,10 +666,12 @@ namespace GitTfs.Core
             var branchesDatas = Tfs.GetRootChangesetForBranch(tfsBranch.Path, parentChangesetId);
 
             IGitTfsRemote remote = null;
+            bool isFirstBranchChangeset = true;
             foreach (var branch in branchesDatas)
             {
                 var rootChangesetId = branch.SourceBranchChangesetId;
-                remote = InitBranch(_remoteOptions, tfsBranch.Path, rootChangesetId, true);
+                remote = InitBranch(_remoteOptions, branch.TfsBranchPath, rootChangesetId, fetchParentBranch: isFirstBranchChangeset, renameResult: renameResult);
+                isFirstBranchChangeset = false;
                 if (remote == null)
                 {
                     Trace.TraceInformation("warning: root commit not found corresponding to changeset " + rootChangesetId);
@@ -725,7 +683,10 @@ namespace GitTfs.Core
                 {
                     try
                     {
-                        remote.Fetch(renameResult: renameResult);
+                        IFetchResult lastFetch = remote.Fetch(renameResult: renameResult);
+                        renameResult = lastFetch != null && lastFetch.IsProcessingRenameChangeset
+                            ? lastFetch
+                            : (IRenameResult)null;
                     }
                     finally
                     {
@@ -771,7 +732,7 @@ namespace GitTfs.Core
         {
             int lowerBoundChangesetId;
 
-            // If we're starting at the Root side of a branch commit (e.g. C1), but there ar
+            // If we're starting at the Root side of a branch commit (e.g. C1), but there are
             // invalid commits between C1 and the actual branch side of the commit operation
             // (e.g. a Folder with the branch name was created [C2] and then deleted [C3],
             // then the root-side was branched [C4; C1 --branch--> C4]), this will detecte
@@ -795,10 +756,7 @@ namespace GitTfs.Core
                 .OrderBy(x => x.Summary.ChangesetId);
         }
 
-        public ITfsChangeset GetChangeset(int changesetId)
-        {
-            return Tfs.GetChangeset(changesetId, this);
-        }
+        public ITfsChangeset GetChangeset(int changesetId) => Tfs.GetChangeset(changesetId, this);
 
         private ITfsChangeset GetLatestChangeset()
         {
@@ -825,20 +783,11 @@ namespace GitTfs.Core
             LogCurrentMapping();
         }
 
-        private void LogCurrentMapping()
-        {
-            Trace.TraceInformation("C" + MaxChangesetId + " = " + MaxCommitHash);
-        }
+        private void LogCurrentMapping() => Trace.TraceInformation("C" + MaxChangesetId + " = " + MaxCommitHash);
 
-        private string TagPrefix
-        {
-            get { return "refs/tags/tfs/" + Id + "/"; }
-        }
+        private string TagPrefix => "refs/tags/tfs/" + Id + "/";
 
-        public string RemoteRef
-        {
-            get { return "refs/remotes/tfs/" + Id; }
-        }
+        public string RemoteRef => "refs/remotes/tfs/" + Id;
 
         private void DoGcIfNeeded()
         {
@@ -850,15 +799,9 @@ namespace GitTfs.Core
             }
         }
 
-        private LogEntry Apply(string parent, ITfsChangeset changeset, IDictionary<string, GitObject> entries)
-        {
-            return Apply(parent, changeset, entries, null);
-        }
+        private LogEntry Apply(string parent, ITfsChangeset changeset, IDictionary<string, GitObject> entries) => Apply(parent, changeset, entries, null);
 
-        private LogEntry Apply(string parent, ITfsChangeset changeset, Action<Exception> ignorableErrorHandler)
-        {
-            return Apply(parent, changeset, BuildEntryDictionary(), ignorableErrorHandler);
-        }
+        private LogEntry Apply(string parent, ITfsChangeset changeset, Action<Exception> ignorableErrorHandler) => Apply(parent, changeset, BuildEntryDictionary(), ignorableErrorHandler);
 
         private LogEntry Apply(string parent, ITfsChangeset changeset, IDictionary<string, GitObject> entries, Action<Exception> ignorableErrorHandler)
         {
@@ -935,15 +878,9 @@ namespace GitTfs.Core
             Repository.UpdateRef(destinationRef, commit, "Shelveset " + shelvesetName + " from " + shelvesetOwner);
         }
 
-        public void Shelve(string shelvesetName, string head, TfsChangesetInfo parentChangeset, CheckinOptions options, bool evaluateCheckinPolicies)
-        {
-            WithWorkspace(parentChangeset, workspace => Shelve(shelvesetName, head, parentChangeset, options, evaluateCheckinPolicies, workspace));
-        }
+        public void Shelve(string shelvesetName, string head, TfsChangesetInfo parentChangeset, CheckinOptions options, bool evaluateCheckinPolicies) => WithWorkspace(parentChangeset, workspace => Shelve(shelvesetName, head, parentChangeset, options, evaluateCheckinPolicies, workspace));
 
-        public bool HasShelveset(string shelvesetName)
-        {
-            return Tfs.HasShelveset(shelvesetName);
-        }
+        public bool HasShelveset(string shelvesetName) => Tfs.HasShelveset(shelvesetName);
 
         private void Shelve(string shelvesetName, string head, TfsChangesetInfo parentChangeset, CheckinOptions options, bool evaluateCheckinPolicies, ITfsWorkspace workspace)
         {
@@ -1022,15 +959,9 @@ namespace GitTfs.Core
             return TfsRepositoryPath.Equals(tfsRepositoryPath, StringComparison.OrdinalIgnoreCase);
         }
 
-        public void DeleteShelveset(string shelvesetName)
-        {
-            WithWorkspace(null, workspace => workspace.DeleteShelveset(shelvesetName));
-        }
+        public void DeleteShelveset(string shelvesetName) => WithWorkspace(null, workspace => workspace.DeleteShelveset(shelvesetName));
 
-        private bool MatchesTfsUrl(string tfsUrl)
-        {
-            return TfsUrl.Equals(tfsUrl, StringComparison.OrdinalIgnoreCase) || Aliases.Contains(tfsUrl, StringComparison.OrdinalIgnoreCase);
-        }
+        private bool MatchesTfsUrl(string tfsUrl) => TfsUrl.Equals(tfsUrl, StringComparison.OrdinalIgnoreCase) || Aliases.Contains(tfsUrl, StringComparison.OrdinalIgnoreCase);
 
         private string ExtractGitBranchNameFromTfsRepositoryPath(string tfsRepositoryPath)
         {
@@ -1041,10 +972,7 @@ namespace GitTfs.Core
             return gitBranchName;
         }
 
-        public IGitTfsRemote InitBranch(RemoteOptions remoteOptions, string tfsRepositoryPath, int rootChangesetId, bool fetchParentBranch, string gitBranchNameExpected = null, IRenameResult renameResult = null)
-        {
-            return InitTfsBranch(remoteOptions, tfsRepositoryPath, rootChangesetId, fetchParentBranch, gitBranchNameExpected, renameResult);
-        }
+        public IGitTfsRemote InitBranch(RemoteOptions remoteOptions, string tfsRepositoryPath, int rootChangesetId, bool fetchParentBranch, string gitBranchNameExpected = null, IRenameResult renameResult = null) => InitTfsBranch(remoteOptions, tfsRepositoryPath, rootChangesetId, fetchParentBranch, gitBranchNameExpected, renameResult);
 
         private bool IgnoreException(string message, bool ignoreRestricted, bool printHint = true)
         {
@@ -1070,12 +998,14 @@ namespace GitTfs.Core
                 string.IsNullOrWhiteSpace(gitBranchNameExpected) ? tfsRepositoryPath : gitBranchNameExpected);
             if (string.IsNullOrWhiteSpace(gitBranchName))
                 throw new GitTfsException("error: The Git branch name '" + gitBranchName + "' is not valid...\n");
-            Trace.WriteLine("Git local branch will be :" + gitBranchName);
+            Trace.WriteLine("Git local branch will be : " + gitBranchName);
 
             string sha1RootCommit = null;
             if (rootChangesetId != -1)
             {
-                sha1RootCommit = Repository.FindCommitHashByChangesetId(rootChangesetId);
+                sha1RootCommit = renameResult != null && renameResult.IsProcessingRenameChangeset
+                    ? renameResult.LastParentCommitBeforeRename
+                    : Repository.FindCommitHashByChangesetId(rootChangesetId);
                 if (fetchParentBranch && string.IsNullOrWhiteSpace(sha1RootCommit))
                 {
                     try

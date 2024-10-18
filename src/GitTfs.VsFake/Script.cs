@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Diagnostics;
 using System.Runtime.Serialization.Formatters.Binary;
+
 using GitTfs.Core;
 using GitTfs.Core.TfsInterop;
 
@@ -12,10 +10,7 @@ namespace GitTfs.VsFake
     {
         public const string EnvVar = "GIT_TFS_VSFAKE_SCRIPT";
 
-        public static Script Load(string path)
-        {
-            return new Script().Tap(script => Load(path, script));
-        }
+        public static Script Load(string path) => new Script().Tap(script => Load(path, script));
 
         private static void Load(string path, Script script)
         {
@@ -38,10 +33,10 @@ namespace GitTfs.VsFake
         }
 
         private readonly List<ScriptedChangeset> _changesets = new List<ScriptedChangeset>();
-        public List<ScriptedChangeset> Changesets { get { return _changesets; } }
+        public List<ScriptedChangeset> Changesets => _changesets;
 
         private readonly List<ScriptedRootBranch> _rootBranches = new List<ScriptedRootBranch>();
-        public List<ScriptedRootBranch> RootBranches { get { return _rootBranches; } }
+        public List<ScriptedRootBranch> RootBranches => _rootBranches;
     }
 
     [Serializable]
@@ -51,7 +46,7 @@ namespace GitTfs.VsFake
         public int Id { get; set; }
         public string Comment { get; set; }
         public DateTime CheckinDate { get; set; }
-        public List<ScriptedChange> Changes { get { return _changes; } }
+        public List<ScriptedChange> Changes => _changes;
 
         public bool IsBranchChangeset { get; set; }
         public BranchChangesetDatas BranchChangesetDatas { get; set; }

@@ -1,14 +1,12 @@
 using GitTfs.Core;
 using GitTfs.Core.TfsInterop;
 using GitTfs.Util;
+
 using Microsoft.TeamFoundation.Server;
 using Microsoft.TeamFoundation.VersionControl.Client;
 using Microsoft.TeamFoundation.VersionControl.Common;
-using System;
-using System.Collections.Generic;
+
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 
 namespace GitTfs.VsCommon
 {
@@ -24,14 +22,10 @@ namespace GitTfs.VsCommon
         }
 
         public IItem GetItem(int itemId, int changesetNumber)
-        {
-            return _bridge.Wrap<WrapperForItem, Item>(_versionControlServer.GetItem(itemId, changesetNumber));
-        }
+            => _bridge.Wrap<WrapperForItem, Item>(_versionControlServer.GetItem(itemId, changesetNumber));
 
         public IItem GetItem(string itemPath, int changesetNumber)
-        {
-            return _bridge.Wrap<WrapperForItem, Item>(_versionControlServer.GetItem(itemPath, new ChangesetVersionSpec(changesetNumber)));
-        }
+            => _bridge.Wrap<WrapperForItem, Item>(_versionControlServer.GetItem(itemPath, new ChangesetVersionSpec(changesetNumber)));
 
         public IItem[] GetItems(string itemPath, int changesetNumber, TfsRecursionType recursionType)
         {
@@ -69,10 +63,7 @@ namespace GitTfs.VsCommon
             _changeset = changeset;
         }
 
-        public IChange[] Changes
-        {
-            get { return _bridge.Wrap<WrapperForChange, Change>(_changeset.Changes); }
-        }
+        public IChange[] Changes => _bridge.Wrap<WrapperForChange, Change>(_changeset.Changes);
 
         public string Committer
         {
@@ -89,30 +80,14 @@ namespace GitTfs.VsCommon
             }
         }
 
-        public DateTime CreationDate
-        {
-            get { return _changeset.CreationDate; }
-        }
-
-        public string Comment
-        {
-            get { return _changeset.Comment; }
-        }
-
-        public int ChangesetId
-        {
-            get { return _changeset.ChangesetId; }
-        }
+        public DateTime CreationDate => _changeset.CreationDate;
+        public string Comment => _changeset.Comment;
+        public int ChangesetId => _changeset.ChangesetId;
 
         public IVersionControlServer VersionControlServer
-        {
-            get { return _bridge.Wrap<WrapperForVersionControlServer, VersionControlServer>(_changeset.VersionControlServer); }
-        }
+            => _bridge.Wrap<WrapperForVersionControlServer, VersionControlServer>(_changeset.VersionControlServer);
 
-        public void Get(ITfsWorkspace workspace, IEnumerable<IChange> changes, Action<Exception> ignorableErrorHandler)
-        {
-            workspace.Get(ChangesetId, changes);
-        }
+        public void Get(ITfsWorkspace workspace, IEnumerable<IChange> changes, Action<Exception> ignorableErrorHandler) => workspace.Get(ChangesetId, changes);
     }
 
     public class WrapperForChange : WrapperFor<Change>, IChange
@@ -126,15 +101,9 @@ namespace GitTfs.VsCommon
             _change = change;
         }
 
-        public TfsChangeType ChangeType
-        {
-            get { return _bridge.Convert<TfsChangeType>(_change.ChangeType); }
-        }
+        public TfsChangeType ChangeType => _bridge.Convert<TfsChangeType>(_change.ChangeType);
 
-        public IItem Item
-        {
-            get { return _bridge.Wrap<WrapperForItem, Item>(_change.Item); }
-        }
+        public IItem Item => _bridge.Wrap<WrapperForItem, Item>(_change.Item);
     }
 
     public class WrapperForItem : WrapperFor<Item>, IItem
@@ -149,51 +118,26 @@ namespace GitTfs.VsCommon
         }
 
         public IVersionControlServer VersionControlServer
-        {
-            get { return _bridge.Wrap<WrapperForVersionControlServer, VersionControlServer>(_item.VersionControlServer); }
-        }
+            => _bridge.Wrap<WrapperForVersionControlServer, VersionControlServer>(_item.VersionControlServer);
 
-        public int ChangesetId
-        {
-            get { return _item.ChangesetId; }
-        }
-
-        public string ServerItem
-        {
-            get { return _item.ServerItem; }
-        }
-
-        public int DeletionId
-        {
-            get { return _item.DeletionId; }
-        }
-
-        public TfsItemType ItemType
-        {
-            get { return _bridge.Convert<TfsItemType>(_item.ItemType); }
-        }
-
-        public int ItemId
-        {
-            get { return _item.ItemId; }
-        }
-
-        public long ContentLength
-        {
-            get { return _item.ContentLength; }
-        }
+        public int ChangesetId => _item.ChangesetId;
+        public string ServerItem => _item.ServerItem;
+        public int DeletionId => _item.DeletionId;
+        public TfsItemType ItemType => _bridge.Convert<TfsItemType>(_item.ItemType);
+        public int ItemId => _item.ItemId;
+        public long ContentLength => _item.ContentLength;
 
         public TemporaryFile DownloadFile()
         {
             var temp = new TemporaryFile();
             try
             {
-                _bridge.Unwrap<Item>(_item).DownloadFile(temp);
+                _item.DownloadFile(temp);
                 return temp;
             }
             catch (Exception)
             {
-                Trace.WriteLine(string.Format("Something went wrong downloading \"{0}\" in changeset {1}", _item.ServerItem, _item.ChangesetId));
+                Trace.WriteLine($"Something went wrong when downloading \"{_item.ServerItem}\" from changeset {_item.ChangesetId}");
                 temp.Dispose();
                 throw;
             }
@@ -210,15 +154,9 @@ namespace GitTfs.VsCommon
             _identity = identity;
         }
 
-        public string MailAddress
-        {
-            get { return _identity.MailAddress; }
-        }
+        public string MailAddress => _identity.MailAddress;
 
-        public string DisplayName
-        {
-            get { return _identity.DisplayName; }
-        }
+        public string DisplayName => _identity.DisplayName;
     }
 
     public class WrapperForShelveset : WrapperFor<Shelveset>, IShelveset
@@ -234,14 +172,14 @@ namespace GitTfs.VsCommon
 
         public string Comment
         {
-            get { return _shelveset.Comment; }
-            set { _shelveset.Comment = value; }
+            get => _shelveset.Comment;
+            set => _shelveset.Comment = value;
         }
 
         public IWorkItemCheckinInfo[] WorkItemInfo
         {
-            get { return _bridge.Wrap<WrapperForWorkItemCheckinInfo, WorkItemCheckinInfo>(_shelveset.WorkItemInfo); }
-            set { _shelveset.WorkItemInfo = _bridge.Unwrap<WorkItemCheckinInfo>(value); }
+            get => _bridge.Wrap<WrapperForWorkItemCheckinInfo, WorkItemCheckinInfo>(_shelveset.WorkItemInfo);
+            set => _shelveset.WorkItemInfo = _bridge.Unwrap<WorkItemCheckinInfo>(value);
         }
     }
 
@@ -285,25 +223,13 @@ namespace GitTfs.VsCommon
             _result = result;
         }
 
-        public ICheckinConflict[] Conflicts
-        {
-            get { return _bridge.Wrap<WrapperForCheckinConflict, CheckinConflict>(_result.Conflicts); }
-        }
+        public ICheckinConflict[] Conflicts => _bridge.Wrap<WrapperForCheckinConflict, CheckinConflict>(_result.Conflicts);
 
-        public ICheckinNoteFailure[] NoteFailures
-        {
-            get { return _bridge.Wrap<WrapperForCheckinNoteFailure, CheckinNoteFailure>(_result.NoteFailures); }
-        }
+        public ICheckinNoteFailure[] NoteFailures => _bridge.Wrap<WrapperForCheckinNoteFailure, CheckinNoteFailure>(_result.NoteFailures);
 
-        public IPolicyFailure[] PolicyFailures
-        {
-            get { return _bridge.Wrap<WrapperForPolicyFailure, PolicyFailure>(_result.PolicyFailures); }
-        }
+        public IPolicyFailure[] PolicyFailures => _bridge.Wrap<WrapperForPolicyFailure, PolicyFailure>(_result.PolicyFailures);
 
-        public Exception PolicyEvaluationException
-        {
-            get { return _result.PolicyEvaluationException; }
-        }
+        public Exception PolicyEvaluationException => _result.PolicyEvaluationException;
     }
 
     public class WrapperForCheckinConflict : WrapperFor<CheckinConflict>, ICheckinConflict
@@ -315,20 +241,9 @@ namespace GitTfs.VsCommon
             _conflict = conflict;
         }
 
-        public string ServerItem
-        {
-            get { return _conflict.ServerItem; }
-        }
-
-        public string Message
-        {
-            get { return _conflict.Message; }
-        }
-
-        public bool Resolvable
-        {
-            get { return _conflict.Resolvable; }
-        }
+        public string ServerItem => _conflict.ServerItem;
+        public string Message => _conflict.Message;
+        public bool Resolvable => _conflict.Resolvable;
     }
 
     public class WrapperForCheckinNoteFailure : WrapperFor<CheckinNoteFailure>, ICheckinNoteFailure
@@ -343,14 +258,9 @@ namespace GitTfs.VsCommon
         }
 
         public ICheckinNoteFieldDefinition Definition
-        {
-            get { return _bridge.Wrap<WrapperForCheckinNoteFieldDefinition, CheckinNoteFieldDefinition>(_failure.Definition); }
-        }
+            => _bridge.Wrap<WrapperForCheckinNoteFieldDefinition, CheckinNoteFieldDefinition>(_failure.Definition);
 
-        public string Message
-        {
-            get { return _failure.Message; }
-        }
+        public string Message => _failure.Message;
     }
 
     public class WrapperForCheckinNoteFieldDefinition : WrapperFor<CheckinNoteFieldDefinition>, ICheckinNoteFieldDefinition
@@ -362,25 +272,10 @@ namespace GitTfs.VsCommon
             _fieldDefinition = fieldDefinition;
         }
 
-        public string ServerItem
-        {
-            get { return _fieldDefinition.ServerItem; }
-        }
-
-        public string Name
-        {
-            get { return _fieldDefinition.Name; }
-        }
-
-        public bool Required
-        {
-            get { return _fieldDefinition.Required; }
-        }
-
-        public int DisplayOrder
-        {
-            get { return _fieldDefinition.DisplayOrder; }
-        }
+        public string ServerItem => _fieldDefinition.ServerItem;
+        public string Name => _fieldDefinition.Name;
+        public bool Required => _fieldDefinition.Required;
+        public int DisplayOrder => _fieldDefinition.DisplayOrder;
     }
 
     public class WrapperForPolicyFailure : WrapperFor<PolicyFailure>, IPolicyFailure
@@ -392,10 +287,7 @@ namespace GitTfs.VsCommon
             _failure = failure;
         }
 
-        public string Message
-        {
-            get { return _failure.Message; }
-        }
+        public string Message => _failure.Message;
     }
 
     public class WrapperForWorkspace : WrapperFor<Workspace>, IWorkspace
@@ -409,15 +301,9 @@ namespace GitTfs.VsCommon
             _workspace = workspace;
         }
 
-        public IPendingChange[] GetPendingChanges()
-        {
-            return _bridge.Wrap<WrapperForPendingChange, PendingChange>(_workspace.GetPendingChanges());
-        }
+        public IPendingChange[] GetPendingChanges() => _bridge.Wrap<WrapperForPendingChange, PendingChange>(_workspace.GetPendingChanges());
 
-        public void Shelve(IShelveset shelveset, IPendingChange[] changes, TfsShelvingOptions options)
-        {
-            _workspace.Shelve(_bridge.Unwrap<Shelveset>(shelveset), _bridge.Unwrap<PendingChange>(changes), _bridge.Convert<ShelvingOptions>(options));
-        }
+        public void Shelve(IShelveset shelveset, IPendingChange[] changes, TfsShelvingOptions options) => _workspace.Shelve(_bridge.Unwrap<Shelveset>(shelveset), _bridge.Unwrap<PendingChange>(changes), _bridge.Convert<ShelvingOptions>(options));
 
         private PolicyOverrideInfo ToTfs(TfsPolicyOverrideInfo policyOverrideInfo)
         {
@@ -428,31 +314,20 @@ namespace GitTfs.VsCommon
         }
 
         public ICheckinEvaluationResult EvaluateCheckin(TfsCheckinEvaluationOptions options, IPendingChange[] allChanges, IPendingChange[] changes,
-                                                        string comment, string author, ICheckinNote checkinNote, IEnumerable<IWorkItemCheckinInfo> workItemChanges)
-        {
-            return _bridge.Wrap<WrapperForCheckinEvaluationResult, CheckinEvaluationResult>(_workspace.EvaluateCheckin(
+                                                        string comment, string author, ICheckinNote checkinNote, IEnumerable<IWorkItemCheckinInfo> workItemChanges) => _bridge.Wrap<WrapperForCheckinEvaluationResult, CheckinEvaluationResult>(_workspace.EvaluateCheckin(
                 _bridge.Convert<CheckinEvaluationOptions>(options),
                 _bridge.Unwrap<PendingChange>(allChanges),
                 _bridge.Unwrap<PendingChange>(changes),
                 comment,
                 _bridge.Unwrap<CheckinNote>(checkinNote),
                 _bridge.Unwrap<WorkItemCheckinInfo>(workItemChanges)));
-        }
 
-        public int PendAdd(string path)
-        {
-            return _workspace.PendAdd(path);
-        }
+        public int PendAdd(string path) => _workspace.PendAdd(path);
 
         public int PendEdit(string path)
-        {
-            return _workspace.PendEdit(new string[] { path }, RecursionType.None, null, LockLevel.Unchanged, false, PendChangesOptions.ForceCheckOutLocalVersion);
-        }
+            => _workspace.PendEdit(new string[] { path }, RecursionType.None, null, LockLevel.Unchanged, false, PendChangesOptions.ForceCheckOutLocalVersion);
 
-        public int PendDelete(string path)
-        {
-            return _workspace.PendDelete(path);
-        }
+        public int PendDelete(string path) => _workspace.PendDelete(path);
 
         public int PendRename(string pathFrom, string pathTo)
         {
@@ -462,10 +337,7 @@ namespace GitTfs.VsCommon
             return _workspace.PendRename(pathFrom, pathTo);
         }
 
-        private void DoUntilNoFailures(Func<GetStatus> get)
-        {
-            Retry.DoWhile(() => get().NumFailures != 0);
-        }
+        private void DoUntilNoFailures(Func<GetStatus> get) => Retry.DoWhile(() => get().NumFailures != 0);
 
         public void ForceGetFile(string path, int changeset)
         {
@@ -473,10 +345,7 @@ namespace GitTfs.VsCommon
             DoUntilNoFailures(() => _workspace.Get(new GetRequest(item, changeset), GetOptions.Overwrite | GetOptions.GetAll));
         }
 
-        public void GetSpecificVersion(int changeset)
-        {
-            Retry.Do(() => DoUntilNoFailures(() => _workspace.Get(new ChangesetVersionSpec(changeset), GetOptions.Overwrite | GetOptions.GetAll)));
-        }
+        public void GetSpecificVersion(int changeset) => Retry.Do(() => DoUntilNoFailures(() => _workspace.Get(new ChangesetVersionSpec(changeset), GetOptions.Overwrite | GetOptions.GetAll)));
 
         public void GetSpecificVersion(int changesetId, IEnumerable<IItem> items, bool noParallel)
         {
@@ -484,30 +353,15 @@ namespace GitTfs.VsCommon
             GetRequests(items.Select(e => new GetRequest(new ItemSpec(e.ServerItem, RecursionType.Full), version)), noParallel);
         }
 
-        public void GetSpecificVersion(IChangeset changeset, bool noParallel)
-        {
-            GetSpecificVersion(changeset.ChangesetId, changeset.Changes, noParallel);
-        }
+        public void GetSpecificVersion(IChangeset changeset, bool noParallel) => GetSpecificVersion(changeset.ChangesetId, changeset.Changes, noParallel);
 
-        public void GetSpecificVersion(int changesetId, IEnumerable<IChange> changes, bool noParallel)
-        {
-            GetRequests(changes.Select(change => new GetRequest(new ItemSpec(change.Item.ServerItem, RecursionType.None, change.Item.DeletionId), changesetId)), noParallel);
-        }
+        public void GetSpecificVersion(int changesetId, IEnumerable<IChange> changes, bool noParallel) => GetRequests(changes.Select(change => new GetRequest(new ItemSpec(change.Item.ServerItem, RecursionType.None, change.Item.DeletionId), changesetId)), noParallel);
 
-        public string GetLocalItemForServerItem(string serverItem)
-        {
-            return _workspace.GetLocalItemForServerItem(serverItem);
-        }
+        public string GetLocalItemForServerItem(string serverItem) => _workspace.GetLocalItemForServerItem(serverItem);
 
-        public string GetServerItemForLocalItem(string localItem)
-        {
-            return _workspace.GetServerItemForLocalItem(localItem);
-        }
+        public string GetServerItemForLocalItem(string localItem) => _workspace.GetServerItemForLocalItem(localItem);
 
-        public string OwnerName
-        {
-            get { return _workspace.OwnerName; }
-        }
+        public string OwnerName => _workspace.OwnerName;
 
         public void Merge(string sourceTfsPath, string targetTfsPath)
         {
@@ -545,27 +399,23 @@ namespace GitTfs.VsCommon
             }
         }
 
-        public void GetRequests(IEnumerable<GetRequest> source, bool noParallel, int batchSize = 20)
-        {
+        public void GetRequests(IEnumerable<GetRequest> source, bool noParallel, int batchSize = 20) => source.ToBatch(batchSize).ForEach(batch =>
+                                                                                                                 {
+                                                                                                                     var items = batch;
+                                                                                                                     Retry.Do(() =>
+                                                                                                                     {
+                                                                                                                         while (items.Length > 0)
+                                                                                                                         {
+                                                                                                                             var status = _workspace.Get(items.ToArray(), GetOptions.Overwrite | GetOptions.GetAll);
+                                                                                                                             if (status.NumFailures == 0)
+                                                                                                                             {
+                                                                                                                                 break;
+                                                                                                                             }
 
-            source.ToBatch(batchSize).ForEach(batch =>
-            {
-                var items = batch;
-                Retry.Do(() =>
-                {
-                    while (items.Length > 0)
-                    {
-                        var status = _workspace.Get(items.ToArray(), GetOptions.Overwrite | GetOptions.GetAll);
-                        if (status.NumFailures == 0)
-                        {
-                            break;
-                        }
-
-                        items = status.GetFailures().Join(items, e => e.ServerItem, e => e.ItemSpec.Item, (failure, request) => request).ToArray();
-                    }
-                });
-            }, !noParallel);
-        }
+                                                                                                                             items = status.GetFailures().Join(items, e => e.ServerItem, e => e.ItemSpec.Item, (failure, request) => request).ToArray();
+                                                                                                                         }
+                                                                                                                     });
+                                                                                                                 }, !noParallel);
     }
 
     public class WrapperForBranchObject : WrapperFor<BranchObject>, IBranchObject
@@ -578,19 +428,8 @@ namespace GitTfs.VsCommon
             _branch = branch;
         }
 
-        public string Path
-        {
-            get { return _branch.Properties.RootItem.Item; }
-        }
-
-        public bool IsRoot
-        {
-            get { return _branch.Properties.ParentBranch == null; }
-        }
-
-        public string ParentPath
-        {
-            get { return _branch.Properties.ParentBranch.Item; }
-        }
+        public string Path => _branch.Properties.RootItem.Item;
+        public bool IsRoot => _branch.Properties.ParentBranch == null;
+        public string ParentPath => _branch.Properties.ParentBranch.Item;
     }
 }

@@ -1,9 +1,4 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -13,13 +8,13 @@ using Microsoft.TeamFoundation.Build.Client;
 using Microsoft.TeamFoundation.Client;
 using Microsoft.TeamFoundation.Common;
 using Microsoft.TeamFoundation.Server;
-using Microsoft.TeamFoundation.VersionControl.Client;
 using Microsoft.VisualStudio.Services.Client;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Settings;
 using Microsoft.VisualStudio.Setup.Configuration;
 
 using StructureMap;
+
 using WindowsCredential = Microsoft.VisualStudio.Services.Common.WindowsCredential;
 
 namespace GitTfs.VsCommon
@@ -34,6 +29,8 @@ namespace GitTfs.VsCommon
 
         private const string myTeamExplorerFolder =
             @"Common7\IDE\CommonExtensions\Microsoft\TeamFoundation\Team Explorer";
+
+        private const string gitTfsPatEnvironmentVariableName = "GIT_TFS_PAT";
 
         private readonly List<string> myAssemblySearchPaths;
 
@@ -175,30 +172,43 @@ namespace GitTfs.VsCommon
         }
 
 #pragma warning disable 618
-        private IGroupSecurityService GroupSecurityService
-        {
-            get { return GetService<IGroupSecurityService>(); }
-        }
+        private IGroupSecurityService GroupSecurityService => GetService<IGroupSecurityService>();
 
-        public override IIdentity GetIdentity(string username)
-        {
-            return _bridge.Wrap<WrapperForIdentity, Identity>(Retry.Do(() => GroupSecurityService.ReadIdentity(SearchFactor.AccountName, username, QueryMembership.None)));
-        }
+        public override IIdentity GetIdentity(string username) => _bridge.Wrap<WrapperForIdentity, Identity>(Retry.Do(() => GroupSecurityService.ReadIdentity(SearchFactor.AccountName, username, QueryMembership.None)));
 
         protected override TfsTeamProjectCollection GetTfsCredential(Uri uri)
         {
-            var vssCred = HasCredentials
-                ? new VssClientCredentials(new WindowsCredential(GetCredential()))
-                : VssClientCredentials.LoadCachedCredentials(uri, false, CredentialPromptType.PromptIfNeeded);
+            VssCredentials vssCred = null;
+
+            string pat = Environment.GetEnvironmentVariable(gitTfsPatEnvironmentVariableName, EnvironmentVariableTarget.User)
+                ?? Environment.GetEnvironmentVariable(gitTfsPatEnvironmentVariableName, EnvironmentVariableTarget.Machine)
+                ?? Environment.GetEnvironmentVariable(gitTfsPatEnvironmentVariableName, EnvironmentVariableTarget.Process);
+
+            if (!string.IsNullOrWhiteSpace(pat))
+            {
+                Trace.WriteLine($"A {gitTfsPatEnvironmentVariableName} environment variable was detected. Establishing TFS credentials using PAT...");
+
+                vssCred = new VssBasicCredential(string.Empty, pat);
+
+                Trace.WriteLine("PAT-based VSS Credentials created.");
+            }
+
+            if (vssCred == null)
+            {
+                Trace.WriteLine("Establishing TFS credentials using user identity...");
+
+                vssCred = HasCredentials
+                    ? new VssClientCredentials(new WindowsCredential(GetCredential()))
+                    : VssClientCredentials.LoadCachedCredentials(uri, false, CredentialPromptType.PromptIfNeeded);
+
+                Trace.WriteLine("Identity-based VSS credentials created.");
+            }
 
             return new TfsTeamProjectCollection(uri, vssCred);
 #pragma warning restore 618
         }
 
-        protected override string GetDialogAssemblyPath()
-        {
-            return Path.Combine(GetVsInstallDir(), myTeamExplorerFolder, DialogAssemblyName + ".dll");
-        }
+        protected override string GetDialogAssemblyPath() => Path.Combine(GetVsInstallDir(), myTeamExplorerFolder, DialogAssemblyName + ".dll");
 
         protected override Assembly LoadFromVsFolder(object sender, ResolveEventArgs args)
         {
