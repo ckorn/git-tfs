@@ -139,12 +139,35 @@ namespace GitTfs.Core
             }
         }
 
+
+        private static bool deletedTooMuch = false;
+        private static int deletedCount = 0;
         private void Delete(string pathInGitRepo, IGitTreeModifier treeBuilder, IDictionary<string, GitObject> initialTree)
         {
             if (initialTree.ContainsKey(pathInGitRepo))
             {
                 treeBuilder.Remove(initialTree[pathInGitRepo].Path);
-                Trace.WriteLine("\tD\t" + pathInGitRepo);
+                int tmp = Interlocked.Increment(ref deletedCount);
+                if (deletedTooMuch)
+                {
+                    if (tmp == 100)
+                    {
+                        Trace.WriteLine("\tD\t" + pathInGitRepo);
+                        deletedCount = 0;
+                    }
+                }
+                else
+                {
+                    if (tmp < 100)
+                    {
+                        Trace.WriteLine("\tD\t" + pathInGitRepo);
+                    }
+                    else
+                    {
+                        deletedTooMuch = true;
+                        deletedCount = 0;
+                    }
+                }
             }
         }
 
@@ -171,13 +194,13 @@ namespace GitTfs.Core
             var name = changesetToLog.Committer;
             var email = changesetToLog.Committer;
             bool foundInAuthorFile = _authors?.Authors?.ContainsKey(changesetToLog.Committer) ?? false;
-            Trace.WriteLine($"Lookup author {_authors?.Authors?.Count ?? 0}: {changesetToLog.Committer}");
+            //Trace.WriteLine($"Lookup author {_authors?.Authors?.Count ?? 0}: {changesetToLog.Committer}");
             if (foundInAuthorFile)
             {
                 name = _authors.Authors[changesetToLog.Committer].Name;
                 email = _authors.Authors[changesetToLog.Committer].Email;
-				Trace.WriteLine($"Found author {changesetToLog.Committer}: {name} {email}");
-				foundInAuthorFile = true;
+                //Trace.WriteLine($"Found author {changesetToLog.Committer}: {name} {email}");
+                foundInAuthorFile = true;
             }
             else if (identity != null)
             {
@@ -189,8 +212,8 @@ namespace GitTfs.Core
 
                 if (!string.IsNullOrWhiteSpace(identity.MailAddress))
                     email = identity.MailAddress;
-				
-				Trace.WriteLine($"Author by identity: {name} {email}");
+
+                //Trace.WriteLine($"Author by identity: {name} {email}");
             }
             else if (!string.IsNullOrWhiteSpace(changesetToLog.Committer))
             {
@@ -200,7 +223,7 @@ namespace GitTfs.Core
                     name = split[1].ToLower();
                     email = $"{name}@{split[0].ToLower()}.tfs.local";
                 }
-				Trace.WriteLine($"Author by {changesetToLog.Committer}: {name} {email}");
+                //Trace.WriteLine($"Author by {changesetToLog.Committer}: {name} {email}");
             }
             // committer's & author's name and email MUST NOT be empty as otherwise they would be picked
             // by git from user.name and user.email config settings which is bad thing because commit could
@@ -220,9 +243,9 @@ namespace GitTfs.Core
 				{
 					 name = _authors.Authors[lookup].Name;
 					 email = _authors.Authors[lookup].Email;
-					 Trace.WriteLine($"Found author {lookup}: {name} {email}");
-				}
-				else
+                    //Trace.WriteLine($"Found author {lookup}: {name} {email}");
+                }
+                else
 				{
 					throw new Exception($"Not found author: {lookup}");
 				}

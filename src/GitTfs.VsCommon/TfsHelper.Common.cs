@@ -146,7 +146,32 @@ namespace GitTfs.VsCommon
             }
         }
 
-        private void Getting(object sender, GettingEventArgs e) => Trace.WriteLine("get [C" + e.Version + "]" + e.ServerItem);
+        private bool gotTooMuch = false;
+        private int gettingCount = 0;
+        private void Getting(object sender, GettingEventArgs e)
+        {
+            int tmp = Interlocked.Increment(ref gettingCount);
+            if (gotTooMuch)
+            {
+                if (tmp == 100)
+                {
+                    Trace.WriteLine("get [C" + e.Version + "]" + e.ServerItem);
+                    gettingCount = 0;
+                }
+            }
+            else
+            {
+                if (tmp < 100)
+                {
+                    Trace.WriteLine("get [C" + e.Version + "]" + e.ServerItem);
+                }
+                else
+                {
+                    gotTooMuch = true;
+                    gettingCount = 0;
+                }
+            }
+        }
 
         private TswaClientHyperlinkService _hyperLinkService;
 
