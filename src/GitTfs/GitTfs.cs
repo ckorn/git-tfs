@@ -42,6 +42,7 @@ namespace GitTfs
             if (RequiresValidGitRepository(command)) AssertValidGitRepository();
             bool willCreateRepository = command.GetType() == typeof(Clone) || command.GetType() == typeof(QuickClone) || command.GetType() == typeof(Init);
             ParseAuthorsAndSave(!willCreateRepository);
+            ReadMergeInfoCache();
             var exitCode = Main(command, unparsedArgs);
             if (willCreateRepository)
             {
@@ -100,6 +101,11 @@ namespace GitTfs
                 Trace.TraceWarning("warning: author file ignored due to a problem occuring when reading it :\n\t" + ex.Message);
                 Trace.TraceWarning("         Verify the file :" + Path.Combine(_globals.GitDir, AuthorsFile.GitTfsCachedAuthorsFileName));
             }
+        }
+
+        private void ReadMergeInfoCache()
+        {
+            _container.GetInstance<MergeInfoCache>().Parse(_globals.GitDir);
         }
 
         public void InitializeGlobals()

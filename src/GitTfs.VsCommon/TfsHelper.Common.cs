@@ -26,12 +26,14 @@ namespace GitTfs.VsCommon
         private static bool _resolverInstalled;
         private AuthorsFile _authorsFile;
         private Uri _lastAuthenticatedUri;
+        private MergeInfoCache _mergeInfoCache;
 
         public TfsHelperBase(TfsApiBridge bridge, IContainer container)
         {
             _bridge = bridge;
             _container = container;
             _authorsFile = _container.GetInstance<AuthorsFile>();
+            _mergeInfoCache = _container.GetInstance<MergeInfoCache>();
             if (!_resolverInstalled)
             {
                 AppDomain.CurrentDomain.AssemblyResolve += LoadFromVsFolder;
@@ -508,6 +510,29 @@ namespace GitTfs.VsCommon
         {
             var mergedItemsToFirstChangesetInBranchToCreate = new List<MergeInfo>();
 
+            if (this._mergeInfoCache.TryGetValue(tfsPathBranchToCreate, tfsPathParentBranch, firstChangesetInBranchToCreate, lastChangesetIdToCheck,
+                out int mergeBaseChangeset, out List<MergeInfoCache.MergeInfo> mergeInfoList))
+            {
+                if (mergeBaseChangeset > 0)
+                {
+                    Trace.WriteLine($"Base changeset from {tfsPathParentBranch} to {tfsPathBranchToCreate} (first changeset={firstChangesetInBranchToCreate}) is {mergeBaseChangeset} (Cache hit)");
+                }
+                else
+                {
+                    Trace.WriteLine($"Did not find merge from {tfsPathParentBranch} to {tfsPathBranchToCreate} (first changeset={firstChangesetInBranchToCreate}) (Cache hit)");
+                }
+                List<MergeInfo> ret = mergeInfoList.Select(x => new MergeInfo()
+                {
+                    SourceChangeset = x.SourceChangeset,
+                    SourceChangeType = (ChangeType)x.SourceChangeType,
+                    SourceItem = x.SourceItem,
+                    TargetChangeset = x.TargetChangeset,
+                    TargetChangeType = (ChangeType)x.TargetChangeType,
+                    TargetItem = x.TargetItem
+                }).ToList();
+                return ret;
+            }
+
             // This does not work in all cases according to:
             // https://github.com/git-tfs/git-tfs/issues/1383#issuecomment-871735559
             // But TrackMerges alone just timeouts here without the help of the base changeset.
@@ -517,7 +542,7 @@ namespace GitTfs.VsCommon
                                   null,
                                   new ChangesetVersionSpec(firstChangesetInBranchToCreate))
                                     .OrderByDescending(x => x.SourceVersion);
-            int mergeBaseChangeset = 0;
+            mergeBaseChangeset = 0;
             if(queryMerges.Any())
             {
                 mergeBaseChangeset = queryMerges.First().SourceVersion;
@@ -574,6 +599,18 @@ namespace GitTfs.VsCommon
                 mergedItemsToFirstChangesetInBranchToCreate.Add(lastMerge);
                 Trace.WriteLine("Merge: " + lastMerge);
             }
+
+            this._mergeInfoCache.AddAndSave(tfsPathBranchToCreate, tfsPathParentBranch, firstChangesetInBranchToCreate, lastChangesetIdToCheck, mergeBaseChangeset,
+                mergedItemsToFirstChangesetInBranchToCreate.Select(x => new MergeInfoCache.MergeInfo()
+                {
+                    SourceChangeset = x.SourceChangeset,
+                    SourceChangeType = (int)x.SourceChangeType,
+                    SourceItem = x.SourceItem,
+                    TargetChangeset = x.TargetChangeset,
+                    TargetChangeType = (int)x.TargetChangeType,
+                    TargetItem = x.TargetItem
+                }).ToList());
+
             return mergedItemsToFirstChangesetInBranchToCreate;
         }
 
