@@ -376,6 +376,11 @@ namespace GitTfs.Core
                         fetchResult.IsSuccess = false;
                         return fetchResult;
                     }
+                    if (File.Exists(abortFile))
+                    {
+                        Trace.TraceInformation($"Abort fetch because of abort file: {abortFile}");
+                        return fetchResult;
+                    }
                     var parentSha = (renameResult != null && renameResult.IsProcessingRenameChangeset) ? renameResult.LastParentCommitBeforeRename : MaxCommitHash;
                     var isFirstTFSCommitInRepository = (MaxChangesetId == 0);
                     var log = Apply(parentSha, changeset, objects);
@@ -396,6 +401,11 @@ namespace GitTfs.Core
                     {
                         foreach (var parent in parentCommitsHashes)
                             log.CommitParents.Add(parent);
+                    }
+                    if (File.Exists(abortFile))
+                    {
+                        Trace.TraceInformation($"Abort fetch because of abort file: {abortFile}");
+                        return fetchResult;
                     }
                     var commitSha = ProcessChangeset(changeset, log);
                     fetchResult.LastFetchedChangesetId = changeset.Summary.ChangesetId;
