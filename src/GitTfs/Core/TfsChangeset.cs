@@ -76,7 +76,32 @@ namespace GitTfs.Core
             }
         }
 
-        private void Ignore(string pathInGitRepo) => Trace.TraceInformation($"C{_changeset.ChangesetId} ! No changes applied to '{pathInGitRepo}', file ignored");
+        private static bool ignoredTooMuch = false;
+        private static int ignoredCount = 0;
+        private void Ignore(string pathInGitRepo)
+        {
+            int tmp = Interlocked.Increment(ref ignoredCount);
+            if (ignoredTooMuch)
+            {
+                if (tmp == 100)
+                {
+                    Trace.TraceInformation($"C{_changeset.ChangesetId} ! No changes applied to '{pathInGitRepo}', file ignored");
+                    ignoredCount = 0;
+                }
+            }
+            else
+            {
+                if (tmp < 100)
+                {
+                    Trace.TraceInformation($"C{_changeset.ChangesetId} ! No changes applied to '{pathInGitRepo}', file ignored");
+                }
+                else
+                {
+                    ignoredTooMuch = true;
+                    ignoredCount = 0;
+                }
+            }
+        }
 
         public IEnumerable<TfsTreeEntry> GetTree() => GetFullTree().Where(item => item.Item.ItemType == TfsItemType.File && !Summary.Remote.ShouldSkip(item.FullName));
 
