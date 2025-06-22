@@ -43,6 +43,7 @@ namespace GitTfs
             bool willCreateRepository = command.GetType() == typeof(Clone) || command.GetType() == typeof(QuickClone) || command.GetType() == typeof(Init);
             ParseAuthorsAndSave(!willCreateRepository);
             ReadMergeInfoCache();
+            ReadTfsChangesets();
             var exitCode = Main(command, unparsedArgs);
             if (willCreateRepository)
             {
@@ -106,6 +107,11 @@ namespace GitTfs
         private void ReadMergeInfoCache()
         {
             _container.GetInstance<MergeInfoCache>().Parse(_globals.GitDir);
+        }
+
+        private void ReadTfsChangesets()
+        {
+            _container.GetInstance<GitTfsChangesetRepository>().Parse(_globals.GitDir);
         }
 
         public void InitializeGlobals()

@@ -24,9 +24,10 @@ namespace GitTfs.VsCommon
         private readonly IContainer _container;
         protected TfsTeamProjectCollection _server;
         private static bool _resolverInstalled;
-        private AuthorsFile _authorsFile;
+        private readonly AuthorsFile _authorsFile;
         private Uri _lastAuthenticatedUri;
-        private MergeInfoCache _mergeInfoCache;
+        private readonly MergeInfoCache _mergeInfoCache;
+        private readonly GitTfsChangesetRepository _changesetRepository;
 
         public TfsHelperBase(TfsApiBridge bridge, IContainer container)
         {
@@ -34,6 +35,7 @@ namespace GitTfs.VsCommon
             _container = container;
             _authorsFile = _container.GetInstance<AuthorsFile>();
             _mergeInfoCache = _container.GetInstance<MergeInfoCache>();
+            _changesetRepository = _container.GetInstance<GitTfsChangesetRepository>();
             if (!_resolverInstalled)
             {
                 AppDomain.CurrentDomain.AssemblyResolve += LoadFromVsFolder;
@@ -642,7 +644,7 @@ namespace GitTfs.VsCommon
         protected ITfsChangeset BuildTfsChangeset(Changeset changeset, IGitTfsRemote remote)
         {
             var tfsChangesetInfo = new TfsChangesetInfo { ChangesetId = changeset.ChangesetId, Remote = remote };
-            ITfsChangeset tfsChangeset = new TfsChangeset(this, _bridge.Wrap<WrapperForChangeset, Changeset>(changeset), tfsChangesetInfo, _authorsFile);
+            ITfsChangeset tfsChangeset = new TfsChangeset(this, _bridge.Wrap<WrapperForChangeset, Changeset>(changeset), tfsChangesetInfo, _authorsFile, _changesetRepository);
 
             tfsChangeset.Summary.Workitems = changeset.AssociatedWorkItems.Select(wi => new TfsWorkitem
             {
@@ -870,7 +872,7 @@ namespace GitTfs.VsCommon
             var wrapperForVersionControlServer =
                 _bridge.Wrap<WrapperForVersionControlServer, VersionControlServer>(VersionControl);
             var fakeChangeset = new Unshelveable(shelveset, change, wrapperForVersionControlServer, _bridge);
-            var tfsChangeset = new TfsChangeset(remote.Tfs, fakeChangeset, new TfsChangesetInfo { Remote = remote }, _authorsFile);
+            var tfsChangeset = new TfsChangeset(remote.Tfs, fakeChangeset, new TfsChangesetInfo { Remote = remote }, _authorsFile, _changesetRepository);
             return tfsChangeset;
         }
 

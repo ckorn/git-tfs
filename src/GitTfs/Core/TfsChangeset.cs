@@ -10,16 +10,18 @@ namespace GitTfs.Core
         private readonly ITfsHelper _tfs;
         private readonly IChangeset _changeset;
         private readonly AuthorsFile _authors;
+        private readonly GitTfsChangesetRepository _changesetRepository;
         public TfsChangesetInfo Summary { get; }
         public int BaseChangesetId { get; }
 
-        public TfsChangeset(ITfsHelper tfs, IChangeset changeset, TfsChangesetInfo tfsChangesetInfo, AuthorsFile authors)
+        public TfsChangeset(ITfsHelper tfs, IChangeset changeset, TfsChangesetInfo tfsChangesetInfo, AuthorsFile authors, GitTfsChangesetRepository changesetRepository)
         {
             _tfs = tfs;
             _changeset = changeset;
             _authors = authors;
             Summary = tfsChangesetInfo;
             BaseChangesetId = _changeset.Changes.Max(c => c.Item.ChangesetId) - 1;
+            _changesetRepository = changesetRepository;
         }
 
         public LogEntry Apply(string lastCommit, IGitTreeModifier treeBuilder, ITfsWorkspace workspace, IDictionary<string, GitObject> initialTree, Action<Exception> ignorableErrorHandler)
@@ -34,28 +36,36 @@ namespace GitTfs.Core
                 IsRenameChangeset = true;
             }
             _changeset.Get(workspace, sieve.GetChangesToFetch(), ignorableErrorHandler);
+            int updateCount = 0;
+            int deleteCount = 0;
+            int ignoreCount = 0;
             foreach (var change in sieve.GetChangesToApply())
             {
                 ignorableErrorHandler.Catch(() =>
                 {
-                    Apply(change, treeBuilder, workspace, initialTree);
+                    Apply(change, treeBuilder, workspace, initialTree, ref updateCount, ref deleteCount, ref ignoreCount);
                 });
             }
+            _changesetRepository.AddAndSaveChanges(_changeset.ChangesetId, Summary.Remote.RemoteRef, updateCount, deleteCount, ignoreCount);
             return MakeNewLogEntry();
         }
 
-        private void Apply(ApplicableChange change, IGitTreeModifier treeBuilder, ITfsWorkspace workspace, IDictionary<string, GitObject> initialTree)
+        private void Apply(ApplicableChange change, IGitTreeModifier treeBuilder, ITfsWorkspace workspace, IDictionary<string, GitObject> initialTree,
+            ref int updateCount, ref int deleteCount, ref int ignoreCount)
         {
             switch (change.Type)
             {
                 case ChangeType.Update:
                     Update(change, treeBuilder, workspace, initialTree);
+                    updateCount++;
                     break;
                 case ChangeType.Delete:
                     Delete(change.GitPath, treeBuilder, initialTree);
+                    deleteCount++;
                     break;
                 case ChangeType.Ignore:
                     Ignore(change.GitPath);
+                    ignoreCount++;
                     break;
                 default:
                     throw new NotImplementedException("Unsupported change type: " + change.Type);
