@@ -63,11 +63,14 @@ namespace GitTfs.Util
         }
 
         public IEnumerable<IChange> GetChangesToFetch()
+            => GetChangesToFetchWithGitPath().Select(c => c.change);
+
+        public IEnumerable<(IChange change, string gitPath)> GetChangesToFetchWithGitPath()
         {
             if (DeletesProject)
-                return Enumerable.Empty<IChange>();
+                return Enumerable.Empty<(IChange change, string gitPath)>();
 
-            return NamedChanges.Where(c => IncludeInFetch(c)).Select(c => c.Change);
+            return NamedChanges.Where(c => IncludeInFetch(c)).Select(c => (c.Change, c.GitPath));
         }
 
         /// <summary>

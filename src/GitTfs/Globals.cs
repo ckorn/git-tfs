@@ -20,9 +20,12 @@ namespace GitTfs
                         v => UserSpecifiedRemoteId = v },
                     { "A|authors=", "Path to an Authors file to map TFS users to Git users (will be kept in cache and used for all the following commands)",
                         v => AuthorsFilePath = Path.GetFullPath(v) },
+                    { "git-reference-repository=", "Path to previous imported repository to fetch files from (requires tfsChangesets.xml)",
+                        v => GitReferenceRepositoryPath = Path.GetFullPath(v) },
                 };
 
         public string AuthorsFilePath { get; set; }
+        public string GitReferenceRepositoryPath { get; set; }
         public bool ShowHelp { get; set; }
         public bool ShowVersion { get; set; }
 

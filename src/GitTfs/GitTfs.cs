@@ -44,6 +44,7 @@ namespace GitTfs
             ParseAuthorsAndSave(!willCreateRepository);
             ReadMergeInfoCache();
             ReadTfsChangesets();
+            InitReferenceGitRepository();
             var exitCode = Main(command, unparsedArgs);
             if (willCreateRepository)
             {
@@ -112,6 +113,14 @@ namespace GitTfs
         private void ReadTfsChangesets()
         {
             _container.GetInstance<GitTfsChangesetRepository>().Parse(_globals.GitDir);
+        }
+
+        private void InitReferenceGitRepository()
+        {
+            if (_container.GetInstance<GitReferenceRepository>().Parse(_globals.GitReferenceRepositoryPath))
+            {
+                Trace.WriteLine($"Inited reference git repository: {_globals.GitReferenceRepositoryPath}");
+            }
         }
 
         public void InitializeGlobals()

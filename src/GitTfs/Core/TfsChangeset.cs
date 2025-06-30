@@ -11,10 +11,12 @@ namespace GitTfs.Core
         private readonly IChangeset _changeset;
         private readonly AuthorsFile _authors;
         private readonly GitTfsChangesetRepository _changesetRepository;
+        private readonly GitReferenceRepository _referenceRepository;
         public TfsChangesetInfo Summary { get; }
         public int BaseChangesetId { get; }
 
-        public TfsChangeset(ITfsHelper tfs, IChangeset changeset, TfsChangesetInfo tfsChangesetInfo, AuthorsFile authors, GitTfsChangesetRepository changesetRepository)
+        public TfsChangeset(ITfsHelper tfs, IChangeset changeset, TfsChangesetInfo tfsChangesetInfo, AuthorsFile authors,
+            GitTfsChangesetRepository changesetRepository, GitReferenceRepository referenceRepository)
         {
             _tfs = tfs;
             _changeset = changeset;
@@ -22,6 +24,7 @@ namespace GitTfs.Core
             Summary = tfsChangesetInfo;
             BaseChangesetId = _changeset.Changes.Max(c => c.Item.ChangesetId) - 1;
             _changesetRepository = changesetRepository;
+            _referenceRepository = referenceRepository;
         }
 
         public LogEntry Apply(string lastCommit, IGitTreeModifier treeBuilder, ITfsWorkspace workspace, IDictionary<string, GitObject> initialTree, Action<Exception> ignorableErrorHandler)
@@ -35,11 +38,52 @@ namespace GitTfs.Core
             {
                 IsRenameChangeset = true;
             }
-            _changeset.Get(workspace, sieve.GetChangesToFetch(), ignorableErrorHandler);
+            List<ApplicableChange> changesToApplyList = null;
+            HashSet<string> gitPathFoundInReferenceSet = new HashSet<string>();
+            if (this._referenceRepository.Parsed)
+            {
+                System.Collections.Generic.HashSet<string> createdDirectoryCacheSet = new System.Collections.Generic.HashSet<string>();
+                int foundInReferenceGitRepository = 0;
+                int totalChanges = 0;
+                changesToApplyList = sieve.GetChangesToApply().ToList();
+                foreach (ApplicableChange applicableChange in changesToApplyList.Where(x => x.Type == ChangeType.Update))
+                {
+                    totalChanges++;
+                    LibGit2Sharp.Tree tree = this._referenceRepository.GetTreeInfo(_changeset.ChangesetId, Summary.Remote.RemoteRef);
+                    if (tree != null)
+                    {
+                        var localPath = workspace.GetLocalPath(applicableChange.GitPath);
+                        bool fileWritten = false;
+                        if (this._referenceRepository.TryWriteFile(tree, applicableChange.GitPath, localPath, createdDirectoryCacheSet))
+                        {
+                            gitPathFoundInReferenceSet.Add(applicableChange.GitPath);
+                            fileWritten = true;
+                        }
+                        fileWritten = fileWritten && File.Exists(localPath);
+                        if (fileWritten)
+                        {
+                            LogFileWrittenFromReferenceGitRepository($"git get [C{_changeset.ChangesetId}] {localPath}");
+                            foundInReferenceGitRepository++;
+                        }
+                        else
+                        {
+                            Trace.TraceInformation("Cannot checkout file '{0}' from reference git repository.", applicableChange.GitPath);
+                            throw new GitTfsException("error: failed to checkout file(s) from reference git repository !");
+                        }
+                    }
+                }
+                Trace.WriteLine($"Changeset {_changeset.ChangesetId}: found in reference git repository {foundInReferenceGitRepository} / {totalChanges}");
+            }
+            _changeset.Get(workspace, sieve.GetChangesToFetchWithGitPath()
+                .Where(x => !gitPathFoundInReferenceSet.Contains(x.gitPath)).Select(x => x.change), ignorableErrorHandler);
             int updateCount = 0;
             int deleteCount = 0;
             int ignoreCount = 0;
-            foreach (var change in sieve.GetChangesToApply())
+            if (changesToApplyList == null)
+            {
+                changesToApplyList = sieve.GetChangesToApply().ToList();
+            }
+            foreach (var change in changesToApplyList)
             {
                 ignorableErrorHandler.Catch(() =>
                 {
@@ -109,6 +153,33 @@ namespace GitTfs.Core
                 {
                     ignoredTooMuch = true;
                     ignoredCount = 0;
+                }
+            }
+        }
+
+        private static bool gotTooMuch = false;
+        private static int gettingCount = 0;
+        private void LogFileWrittenFromReferenceGitRepository(string text)
+        {
+            int tmp = Interlocked.Increment(ref gettingCount);
+            if (gotTooMuch)
+            {
+                if (tmp == 100)
+                {
+                    Trace.WriteLine(text);
+                    gettingCount = 0;
+                }
+            }
+            else
+            {
+                if (tmp < 100)
+                {
+                    Trace.WriteLine(text);
+                }
+                else
+                {
+                    gotTooMuch = true;
+                    gettingCount = 0;
                 }
             }
         }
