@@ -262,6 +262,8 @@ namespace GitTfs.Commands
             branchesToProcess.Add(new BranchDatas { TfsRepositoryPath = defaultRemote.TfsRepositoryPath, TfsRemote = defaultRemote, RootChangesetId = -1 });
 
             bool isSomethingDone;
+            string abortFile = Path.Combine(Path.GetTempPath(), "git-tfs-fetch-abort");
+            bool abortFileExists = false;
             do
             {
                 isSomethingDone = false;
@@ -305,6 +307,16 @@ namespace GitTfs.Commands
                             tfsBranch.Error = ex;
                         }
                     }
+                    abortFileExists = File.Exists(abortFile);
+                    if (abortFileExists)
+                    {
+                        Trace.TraceInformation($"Abort fetch because of abort file: {abortFile}");
+                        break;
+                    }
+                }
+                if (abortFileExists)
+                {
+                    break;
                 }
             } while (branchesToProcess.Any(b => !b.IsEntirelyFetched && b.Error == null) && isSomethingDone);
 
@@ -319,7 +331,10 @@ namespace GitTfs.Commands
                 {
                     Trace.TraceInformation("- " + branchNotInited.TfsRepositoryPath);
                 }
-                Trace.TraceInformation("\nPlease report this case to the git-tfs developers! (report here : https://github.com/git-tfs/git-tfs/issues/461 )");
+                if (!abortFileExists)
+                {
+                    Trace.TraceInformation("\nPlease report this case to the git-tfs developers! (report here : https://github.com/git-tfs/git-tfs/issues/461 )"); 
+                }
             }
             if (branchesToProcess.Any(b => b.Error != null))
             {
@@ -333,7 +348,10 @@ namespace GitTfs.Commands
                     else
                         Trace.TraceInformation("   =>error:" + branchWithErrors.Error.Message);
                 }
-                Trace.TraceInformation("\nPlease report this case to the git-tfs developers! (report here : https://github.com/git-tfs/git-tfs/issues )");
+                if (!abortFileExists)
+                {
+                    Trace.TraceInformation("\nPlease report this case to the git-tfs developers! (report here : https://github.com/git-tfs/git-tfs/issues )"); 
+                }
                 return false;
             }
 
