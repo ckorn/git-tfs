@@ -27,6 +27,7 @@ namespace GitTfs.VsCommon
         private readonly AuthorsFile _authorsFile;
         private Uri _lastAuthenticatedUri;
         private readonly MergeInfoCache _mergeInfoCache;
+        private readonly MergeInfoOverride _mergeInfoOverride;
         private readonly GitTfsChangesetRepository _changesetRepository;
         private readonly GitReferenceRepository _referenceRepository;
 
@@ -36,6 +37,7 @@ namespace GitTfs.VsCommon
             _container = container;
             _authorsFile = _container.GetInstance<AuthorsFile>();
             _mergeInfoCache = _container.GetInstance<MergeInfoCache>();
+            _mergeInfoOverride = _container.GetInstance<MergeInfoOverride>();
             _changesetRepository = _container.GetInstance<GitTfsChangesetRepository>();
             _referenceRepository = _container.GetInstance<GitReferenceRepository>();
             if (!_resolverInstalled)
@@ -288,6 +290,11 @@ namespace GitTfs.VsCommon
             if (!AllTfsBranches.TryGetValue(tfsPathBranchToCreate, out tfsParentBranch))
             {
                 throw new GitTfsException("error: TFS branches " + tfsPathBranchToCreate + " not found!");
+            }
+            if (this._mergeInfoOverride.TryGetValue(tfsPathBranchToCreate, out string overriddenParentBranch))
+            {
+                Trace.WriteLine("Parent branch overridden:" + (tfsParentBranch ?? string.Empty) + " --> " + overriddenParentBranch);
+                tfsParentBranch = overriddenParentBranch;
             }
 
             if (tfsParentBranch == null)
